@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:node_type_name",
+ "creation": "2026-07-17 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "node_type_name",
+  "shape",
+  "is_start",
+  "is_end",
+  "color",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "node_type_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Node Type Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "shape",
+   "fieldtype": "Select",
+   "label": "Shape",
+   "options": "Terminator\nRectangle\nDiamond\nParallelogram\nCircle"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_start",
+   "fieldtype": "Check",
+   "label": "Is Start"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_end",
+   "fieldtype": "Check",
+   "label": "Is End"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Data",
+   "label": "Color"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Node Type",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-17 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sub_process",
+  "map_title",
+  "map_type",
+  "direction",
+  "status",
+  "version_label",
+  "thumbnail"
+ ],
+ "fields": [
+  {
+   "fieldname": "sub_process",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sub Process",
+   "options": "Flowlane Sub Process",
+   "reqd": 1
+  },
+  {
+   "fieldname": "map_title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Map Title"
+  },
+  {
+   "fieldname": "map_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Map Type",
+   "options": "As-Is\nTo-Be",
+   "reqd": 1
+  },
+  {
+   "default": "Top-to-Bottom",
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "label": "Direction",
+   "options": "Top-to-Bottom\nLeft-to-Right"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nIn Review\nApproved"
+  },
+  {
+   "default": "v1",
+   "fieldname": "version_label",
+   "fieldtype": "Data",
+   "label": "Version Label"
+  },
+  {
+   "fieldname": "thumbnail",
+   "fieldtype": "Attach Image",
+   "label": "Thumbnail",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Process Map",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "map_title",
+ "track_changes": 1
+}

@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-17 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "parent_process",
+  "title",
+  "sequence",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "parent_process",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Process",
+   "options": "Flowlane Process",
+   "reqd": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Sub Process",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

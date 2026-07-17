@@ -53,3 +53,7 @@ jspm_packages/
 
 # Aider AI Chat
 .aider*
+
+# Generated SPA build output (reproduced by `yarn build` / `bench build`)
+flowlane/public/frontend/
+flowlane/www/flowlane.html

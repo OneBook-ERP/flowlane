@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-17 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "client",
+  "process_name",
+  "value_stream",
+  "category",
+  "process_owner",
+  "process_analyst",
+  "erpnext_architect",
+  "status",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Client",
+   "options": "Flowlane Client",
+   "reqd": 1
+  },
+  {
+   "fieldname": "process_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Process Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "value_stream",
+   "fieldtype": "Link",
+   "label": "Value Stream",
+   "options": "Flowlane Value Stream"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Flowlane Process Category"
+  },
+  {
+   "fieldname": "process_owner",
+   "fieldtype": "Data",
+   "label": "Process Owner"
+  },
+  {
+   "fieldname": "process_analyst",
+   "fieldtype": "Link",
+   "label": "Process Analyst",
+   "options": "User"
+  },
+  {
+   "fieldname": "erpnext_architect",
+   "fieldtype": "Link",
+   "label": "Erpnext Architect",
+   "options": "User"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nIn Review\nApproved"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Process",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "process_name",
+ "track_changes": 1
+}

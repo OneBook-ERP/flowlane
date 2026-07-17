@@ -1,0 +1,182 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-17 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "process_map",
+  "step_id",
+  "step_name",
+  "lane_role",
+  "node_type",
+  "sequence",
+  "trigger_input",
+  "output_result",
+  "erpnext_module",
+  "erpnext_doctype",
+  "workflow_state",
+  "key_data_fields",
+  "business_rules",
+  "exceptions",
+  "controls_approvals",
+  "integrations",
+  "kpis",
+  "manual_x",
+  "manual_y",
+  "connections",
+  "pain_points"
+ ],
+ "fields": [
+  {
+   "fieldname": "process_map",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Process Map",
+   "options": "Flowlane Process Map",
+   "reqd": 1
+  },
+  {
+   "fieldname": "step_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Step Id",
+   "reqd": 1
+  },
+  {
+   "fieldname": "step_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Step Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lane_role",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Lane Role",
+   "options": "Flowlane Lane Role",
+   "reqd": 1
+  },
+  {
+   "default": "Process/Task",
+   "fieldname": "node_type",
+   "fieldtype": "Link",
+   "label": "Node Type",
+   "options": "Flowlane Node Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "trigger_input",
+   "fieldtype": "Small Text",
+   "label": "Trigger Input"
+  },
+  {
+   "fieldname": "output_result",
+   "fieldtype": "Small Text",
+   "label": "Output Result"
+  },
+  {
+   "fieldname": "erpnext_module",
+   "fieldtype": "Link",
+   "label": "Erpnext Module",
+   "options": "Flowlane ERPNext Module"
+  },
+  {
+   "fieldname": "erpnext_doctype",
+   "fieldtype": "Link",
+   "label": "Erpnext Doctype",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Data",
+   "label": "Workflow State"
+  },
+  {
+   "fieldname": "key_data_fields",
+   "fieldtype": "Small Text",
+   "label": "Key Data Fields"
+  },
+  {
+   "fieldname": "business_rules",
+   "fieldtype": "Text",
+   "label": "Business Rules"
+  },
+  {
+   "fieldname": "exceptions",
+   "fieldtype": "Small Text",
+   "label": "Exceptions"
+  },
+  {
+   "fieldname": "controls_approvals",
+   "fieldtype": "Small Text",
+   "label": "Controls Approvals"
+  },
+  {
+   "fieldname": "integrations",
+   "fieldtype": "Small Text",
+   "label": "Integrations"
+  },
+  {
+   "fieldname": "kpis",
+   "fieldtype": "Small Text",
+   "label": "Kpis"
+  },
+  {
+   "fieldname": "manual_x",
+   "fieldtype": "Float",
+   "label": "Manual X"
+  },
+  {
+   "fieldname": "manual_y",
+   "fieldtype": "Float",
+   "label": "Manual Y"
+  },
+  {
+   "fieldname": "connections",
+   "fieldtype": "Table",
+   "label": "Connections",
+   "options": "Flowlane Step Connection"
+  },
+  {
+   "fieldname": "pain_points",
+   "fieldtype": "Table",
+   "label": "Pain Points",
+   "options": "Flowlane Pain Point"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Map Step",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "step_name",
+ "track_changes": 1
+}

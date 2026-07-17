@@ -5,6 +5,11 @@ app_description = "Client business process mapping tool"
 app_email = "tools.zenpivot@gmail.com"
 app_license = "agpl-3.0"
 
+# Serve the Vue SPA at /flowlane (built into www/flowlane.html).
+website_route_rules = [
+	{"from_route": "/flowlane/<path:app_path>", "to_route": "flowlane"},
+]
+
 # Apps
 # ------------------
 
@@ -86,7 +91,10 @@ app_license = "agpl-3.0"
 # ------------
 
 # before_install = "flowlane.install.before_install"
-# after_install = "flowlane.install.after_install"
+# Idempotent setup (roles, permissions, seed masters). Runs on fresh install AND
+# on every migrate, because patches.txt patches do NOT execute on a fresh install.
+after_install = "flowlane.setup.ensure_setup"
+after_migrate = "flowlane.setup.ensure_setup"
 
 # Uninstallation
 # ------------
