@@ -11,7 +11,16 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ClientTile: typeof import('./src/components/ClientTile.vue')['default']
+    ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
+    HierarchyTree: typeof import('./src/components/HierarchyTree.vue')['default']
+    MapBadge: typeof import('./src/components/MapBadge.vue')['default']
+    NewClientDialog: typeof import('./src/components/NewClientDialog.vue')['default']
+    NewMapDialog: typeof import('./src/components/NewMapDialog.vue')['default']
+    ProcessDialog: typeof import('./src/components/ProcessDialog.vue')['default']
+    RenameDialog: typeof import('./src/components/RenameDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']
   }
 }
