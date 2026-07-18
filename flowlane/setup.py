@@ -21,6 +21,10 @@ MASTER_DOCTYPES = (
 	"Flowlane Industry Vertical",
 	"Flowlane ERPNext Module",
 	"Flowlane Pain Point Type",
+	# Not a dropdown dataset, but read-only reference data the same way: the
+	# module-picker in New Client reads it via flowlane.api.templates, and
+	# only managers curate the templates themselves.
+	"Flowlane Process Template",
 )
 
 # Doctypes consultants fully own (create/edit/delete); managers get these too.
@@ -44,6 +48,7 @@ def ensure_setup(*args, **kwargs) -> None:
 	_ensure_roles()
 	_ensure_permissions()
 	_seed_masters()
+	_seed_process_templates()
 	frappe.clear_cache()
 
 
@@ -144,3 +149,93 @@ PAIN_POINT_TYPES = [
 	"Bottleneck", "Duplicate Data Entry", "Missing Control", "Delayed Approval",
 	"Unclear Ownership", "Manual/Off-System Work", "Rework/Error-Prone", "Compliance Risk",
 ]
+
+
+# --- seed process templates (create-if-absent) ------------------------------
+# One starting skeleton per ERPNext module a client onboarding wizard can
+# offer (flowlane.api.templates.apply_templates copies these into a client's
+# own Process/Sub Process rows). `value_stream` only points at a VALUE_STREAMS
+# entry seeded above; left blank where a module's work doesn't map cleanly to
+# a single value stream rather than stretching a fit.
+_HORIZONTAL = "Horizontal (Core)"
+
+PROCESS_TEMPLATES = [
+	{
+		"module": "Selling", "process_name": "Quote-to-Cash",
+		"value_stream": "Quote-to-Cash", "category": _HORIZONTAL,
+		"sub_processes": [
+			"Lead Management", "Opportunity & Quotation", "Order Booking",
+			"Fulfilment", "Invoicing & Collections",
+		],
+	},
+	{
+		"module": "Buying", "process_name": "Procure-to-Pay",
+		"value_stream": "Procure-to-Pay", "category": _HORIZONTAL,
+		"sub_processes": [
+			"Requisition & Supplier Selection", "Purchase Ordering",
+			"Goods Receipt", "Invoice Matching", "Payment",
+		],
+	},
+	{
+		# Warehouse ops span both inbound (Procure-to-Pay) and outbound
+		# (Quote-to-Cash) value streams, so no single seeded stream fits —
+		# left blank rather than picking a stretch.
+		"module": "Stock", "process_name": "Inventory & Warehouse",
+		"value_stream": None, "category": _HORIZONTAL,
+		"sub_processes": ["Stock Receipt", "Stock Transfer", "Stock Issue", "Cycle Count"],
+	},
+	{
+		"module": "Accounts", "process_name": "Financial Close",
+		"value_stream": "Record-to-Report", "category": _HORIZONTAL,
+		"sub_processes": ["Journal Entries", "Reconciliation", "Period Close", "Reporting"],
+	},
+	{
+		"module": "HR", "process_name": "Hire-to-Retire",
+		"value_stream": "Hire-to-Retire", "category": _HORIZONTAL,
+		"sub_processes": [
+			"Recruitment", "Onboarding", "Payroll Processing", "Exit Management",
+		],
+	},
+	{
+		"module": "Manufacturing", "process_name": "Plan-to-Produce",
+		"value_stream": "Plan-to-Produce", "category": _HORIZONTAL,
+		"sub_processes": [
+			"Production Planning", "BOM Management", "Work Order Execution", "Quality Check",
+		],
+	},
+	{
+		# Project delivery isn't one of the seeded value streams either.
+		"module": "Projects", "process_name": "Projects & Timesheets",
+		"value_stream": None, "category": _HORIZONTAL,
+		"sub_processes": [
+			"Project Setup", "Task Assignment", "Timesheet Capture", "Billing",
+		],
+	},
+]
+
+
+def _seed_process_templates() -> None:
+	for index, template in enumerate(PROCESS_TEMPLATES):
+		if frappe.db.exists(
+			"Flowlane Process Template",
+			{"module": template["module"], "process_name": template["process_name"]},
+		):
+			continue
+		_insert_process_template(template, sequence=index + 1)
+
+
+def _insert_process_template(template: dict, sequence: int) -> None:
+	frappe.get_doc(
+		{
+			"doctype": "Flowlane Process Template",
+			"module": template["module"],
+			"process_name": template["process_name"],
+			"value_stream": template["value_stream"],
+			"category": template["category"],
+			"sequence": sequence,
+			"sub_process_templates": [
+				{"title": title, "sequence": i + 1}
+				for i, title in enumerate(template["sub_processes"])
+			],
+		}
+	).insert(ignore_permissions=True)
