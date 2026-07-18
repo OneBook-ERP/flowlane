@@ -438,3 +438,40 @@ their fix sites (`GridCell.vue`'s dot branch, `MapWorkspace.vue`'s
   pixels. Rendered via `FeatherIcon` nested directly inside the node's
   `<g>` (nested `<svg x y width height>` is valid SVG; Vue's namespace
   inheritance handles a component-rendered `<svg>` root fine here).
+
+## Client onboarding via process templates
+Seeded `Flowlane Process Template` docs (one per ERPNext module — Selling,
+Buying, Stock, Accounts, HR, Manufacturing, Projects; see
+`flowlane/setup.py`'s `PROCESS_TEMPLATES` + `_seed_process_templates`) are a
+starting Process/Sub Process skeleton a consultant can apply to a brand-new
+client instead of mapping from a blank tree, each with an ordered
+`sub_process_templates` child table (`Flowlane Sub Process Template`).
+`value_stream` only points at an already-seeded `Flowlane Value Stream`
+entry — left blank for a module (Stock, Projects) whose work doesn't map
+cleanly onto one of the 8 seeded streams, rather than stretching a fit or
+inventing a new master row.
+
+- `flowlane.api.templates.get_templates()` — every template + its
+  sub-process rows, for a picker preview. `apply_templates(client, modules)`
+  — for each selected ERPNext module, creates the matching Process (+ its
+  Sub Processes) under `client`, **skipping** any process whose
+  `process_name` already exists for that client (idempotent re-apply).
+  Returns `{created: [...], skipped: [...]}`. Relies on Frappe's per-request
+  rollback-on-exception for atomicity — no hand-rolled savepoint, same
+  reasoning as `map.save_steps`.
+- `NewClientDialog.vue` gained an optional "Modules in use" `MultiSelect`
+  (frappe-ui, options from the existing `erpnext_module` master) with a live
+  preview of what each selection would create. Zero modules picked behaves
+  exactly as before this feature existed (no template call, no navigation)
+  — fully backward compatible. One or more modules picked: `save()` creates
+  the client, calls `apply_templates`, toasts a summary, then
+  `router.push`es straight into that client's workspace so the populated
+  tree is the first thing shown.
+- `data/templates.js` — the thin frappe-ui resource/call wrapper
+  (`processTemplates`, `applyTemplates`), untested, same shape as
+  `data/clients.js`/`data/masters.js`. `data/templateSummary.js` holds the
+  actual pure logic (`templatesForModules`, `summarizeApplyResult`) and is
+  unit-tested — split out because importing frappe-ui at module scope breaks
+  under vitest's resolution in this repo (`Cannot find module
+  '.../frappe-ui/src/resources/resources'`, reproduces for any `data/*`
+  module that calls `createResource` at import time, not just this one).
