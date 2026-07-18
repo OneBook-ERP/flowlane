@@ -15,12 +15,18 @@ import MapTabs from './MapTabs.vue'
 import MapSettingsInspector from './MapSettingsInspector.vue'
 import ExportMenu from './ExportMenu.vue'
 import { provideMapStore } from '@/stores/useMapStore.js'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({ map: { type: String, required: true } })
 
 const store = provideMapStore(props.map)
 const mapTabsRef = ref(null)
 const inspectorCollapsed = ref(false)
+// Tweak panel's "Inspector: Docked / Overlay" (UI step U4, §5). Docked (the
+// U2 default) is a flex sibling that shares width with MapTabs; Overlay lets
+// MapTabs use the FULL pane width and floats the inspector on top instead —
+// a real canvas-room tradeoff, not a cosmetic change.
+const overlayInspector = computed(() => uiPrefs.inspectorMode === 'overlay')
 
 const hasSteps = computed(() => store.state.steps.length > 0)
 const isDiagramActive = computed(() => mapTabsRef.value?.activeTab === 'diagram')
@@ -46,11 +52,15 @@ onMounted(() => store.load())
        horizontal scroll (UI-REVAMP B1) never fired. Match this on every
        flex-1 width-bearing wrapper down this tree (see the child div right
        below, and #editor-tabs itself). -->
-  <div class="flex h-full min-h-0 min-w-0 flex-1">
+  <div class="relative flex h-full min-h-0 min-w-0 flex-1">
     <div class="min-w-0 flex-1">
       <MapTabs ref="mapTabsRef" />
     </div>
-    <MapSettingsInspector v-model:collapsed="inspectorCollapsed" :store="store" />
+    <MapSettingsInspector
+      v-model:collapsed="inspectorCollapsed"
+      :store="store"
+      :class="overlayInspector ? 'absolute inset-y-0 right-0 z-20 shadow-lg' : ''"
+    />
   </div>
 
   <Teleport to="#topbar-status-slot">

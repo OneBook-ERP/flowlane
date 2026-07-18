@@ -151,8 +151,10 @@ Shared, presentation-only where possible; pages own state + mutations.
   `new-sub`, `edit-process`, `move-sub`, …). No mutations inside. Takes an
   `autoExpand: string[]` prop (added U2) to force-open ancestors — used to
   reveal a deep-linked map's process/sub without the user manually expanding.
-- `ClientTile.vue`, `MapBadge.vue` (As-Is amber / To-Be green), `RenameDialog.vue`,
-  `ConfirmDeleteDialog.vue`.
+- `ClientTile.vue` (card) / `ClientListRow.vue` (list, added U4 — D2's other
+  home-grid mode), `MapBadge.vue` (As-Is amber / To-Be green), `RenameDialog.vue`,
+  `ConfirmDeleteDialog.vue`, `TweakPanel.vue` (added U4, mounted once in
+  `App.vue` — see "UI step U4" below).
 - Dialogs `NewClientDialog.vue`, `ProcessDialog.vue`, `SubProcessDialog.vue`,
   `NewMapDialog.vue` — each `v-model`-driven, emits `saved`, and self-toasts.
 - `src/components/workspace/` (added U2) — shell chrome for `ClientWorkspace.vue`:
@@ -230,4 +232,55 @@ Whitelisted methods, `@frappe.whitelist()`. Phase 1 added `tree.py` (`get_client
 `get_client_tree`) and `masters.py` (`get_masters`); `map.py` has `validate_graph`.
 UI step U2 added `tree.py`'s `get_map_location(map)` — resolves a map to its
 `{client, process, sub_process}` ancestry for the `/m/:map` deep-link resolver.
+UI step U4 added `modified` to `get_clients`' field list (no schema change) so
+the home grid/list can show "edited Nd ago" (D2); formatted client-side by
+`src/format/relativeTime.js`.
 Permissions: roles Flowlane Consultant / Flowlane Manager / System Manager (Phase 0).
+
+## UI step U4 — density pass + Tweak panel (D1/D2/D3, §5)
+Global scale/rhythm, client-home layout modes, and hierarchy-detail header
+strips, plus the floating Tweak panel from the ui-design skill / §5 that lets
+these be compared live rather than committed blind.
+
+- `src/ui/uiPrefs.js` — the Tweak panel's state: a plain module-level
+  `reactive()` singleton (same "one shared resource" shape as `data/masters.js`,
+  not Vuex/Pinia), persisted to `localStorage`. Keys: `density`
+  (`compact`/`relaxed`, D1), `homeMode` (`grid`/`list`, D2), `treeTheme`
+  (`light`/`dark`), `inspectorMode` (`docked`/`overlay`), `tableTextMode`
+  (`ellipsis`/`wrap`). Any component reads live values directly off `uiPrefs`
+  — no provide/inject wiring needed.
+- `src/components/TweakPanel.vue` — floating bottom-right panel (mounted once
+  in `App.vue`, so it's available on every route), collapsible to a small gear
+  button. Each row is a real layout fork, wired straight to `uiPrefs`; see the
+  component using-sites below for what each toggle actually changes.
+- **D1 (global rhythm):** `uiPrefs.density` drives row/field vertical padding
+  in `StepRow.vue` + `TableTab.vue`'s header (Table rows), `HierarchyTree.vue`
+  (tree rows), `StepInspector.vue` (field stack gap), and `ClientTile.vue`
+  (card padding/gap) — column widths and sticky behavior are unaffected either
+  way, only spacing changes.
+- **D2 (client home):** `HomePage.vue` gained a count + search header row
+  (`src/data/clientFilter.js`, pure, unit-tested: matches `client_name` /
+  `industry_vertical`) and now switches between the existing `ClientTile.vue`
+  grid (compact variant targets 6-8/row) and the new `ClientListRow.vue`
+  (denser one-row-per-client) based on `uiPrefs.homeMode`. Both show industry,
+  status, process count and "edited Nd ago" (`src/format/relativeTime.js`,
+  pure, unit-tested).
+- **D3 (hierarchy detail):** `ClientWorkspace.vue`'s process/sub-process detail
+  pane (no map open) now renders a compact header strip (title + inline
+  key-values/chips + the one primary action) instead of a whole page of
+  isolated `dl` rows, and the body underneath is never empty — it lists the
+  process's sub-processes (click to drill in) or the sub-process's maps (click
+  to open), reusing data the tree resource already loaded (no new backend
+  call).
+- **§5 remaining toggles:** `TreeRail.vue`'s `treeTheme` swaps to a dark rail
+  background — `HierarchyTree.vue` is reused unchanged (per U2's convention)
+  so the dark variant recolors it as a unit via a scoped `:deep()` block using
+  Tailwind's `theme()` CSS function (resolves through this project's real
+  frappe-ui-customized palette, not assumed stock Tailwind hex — verified in
+  the built CSS output). `MapWorkspace.vue`'s `inspectorMode` toggles
+  `MapSettingsInspector` between its docked flex-sibling layout (U2 default)
+  and an absolutely-positioned overlay that lets `MapTabs` use the full pane
+  width. `GridCell.vue`'s `tableTextMode` swaps long free-text columns
+  (`column.ellipsis`) between the single-line-+ tooltip input (default) and a
+  small multi-line `textarea` that genuinely wraps (row height grows — no
+  fixed row height exists to fight).

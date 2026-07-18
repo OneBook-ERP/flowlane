@@ -3,9 +3,10 @@
 // Sub Process (L2) -> Process Map (L3). Rows expand/collapse; each row has a ⋯
 // menu (add child / edit / delete / move) and emits intent events. The parent
 // page owns the dialogs and mutations — this component is presentation only.
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
   processes: { type: Array, default: () => [] },
@@ -14,6 +15,9 @@ const props = defineProps({
   // workspace shell uses this to reveal a deep-linked map's ancestors (U2/B2).
   autoExpand: { type: Array, default: () => [] },
 })
+
+// Tweak panel Density (D1): 30px-ish compact tree rows vs a roomier row.
+const rowY = computed(() => (uiPrefs.density === 'relaxed' ? 'py-1.5' : 'py-1'))
 const emit = defineEmits([
   'select',
   'open-map',
@@ -90,7 +94,7 @@ const rowClass = (name) =>
   <div class="flex flex-col gap-0.5 text-sm">
     <div v-for="process in processes" :key="process.name">
       <!-- L1 Process -->
-      <div class="flex items-center gap-1 rounded px-1.5 py-1" :class="rowClass(process.name)">
+      <div class="flex items-center gap-1 rounded px-1.5" :class="[rowY, rowClass(process.name)]">
         <button class="p-0.5 text-ink-gray-5" @click="toggle(process.name)">
           <FeatherIcon
             :name="isOpen(process.name) ? 'chevron-down' : 'chevron-right'"
@@ -119,7 +123,7 @@ const rowClass = (name) =>
           No sub processes
         </p>
         <div v-for="(sub, index) in process.sub_processes" :key="sub.name">
-          <div class="flex items-center gap-1 rounded px-1.5 py-1" :class="rowClass(sub.name)">
+          <div class="flex items-center gap-1 rounded px-1.5" :class="[rowY, rowClass(sub.name)]">
             <button class="p-0.5 text-ink-gray-5" @click="toggle(sub.name)">
               <FeatherIcon
                 :name="isOpen(sub.name) ? 'chevron-down' : 'chevron-right'"
@@ -147,8 +151,8 @@ const rowClass = (name) =>
             <div
               v-for="map in sub.maps"
               :key="map.name"
-              class="flex items-center gap-1.5 rounded px-1.5 py-1"
-              :class="rowClass(map.name)"
+              class="flex items-center gap-1.5 rounded px-1.5"
+              :class="[rowY, rowClass(map.name)]"
             >
               <FeatherIcon name="git-branch" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
               <button

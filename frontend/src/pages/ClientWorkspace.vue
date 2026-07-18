@@ -13,7 +13,8 @@
 // MapWorkspace (keyed by map name), and is untouched.
 import { ref, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button, toast } from 'frappe-ui'
+import { Button, FeatherIcon, toast } from 'frappe-ui'
+import MapBadge from '@/components/MapBadge.vue'
 import {
   loadClientTree,
   deleteProcess,
@@ -227,34 +228,90 @@ async function moveSub({ process, sub, direction }) {
         <MapWorkspace :key="activeMap" :map="activeMap" />
       </div>
 
-      <!-- Process / sub-process detail (no map selected). -->
-      <section v-else class="flex-1 overflow-y-auto p-8">
-        <div v-if="!selected" class="text-sm text-ink-gray-5">
+      <!-- Process / sub-process detail (no map selected, UI-REVAMP D3): a
+           compact header strip of inline key-values/chips instead of a whole
+           page, with the body doing real work — the children list — rather
+           than sitting empty below three rows on white. -->
+      <section v-else class="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div v-if="!selected" class="flex flex-1 items-center justify-center text-sm text-ink-gray-5">
           Select a process, sub process, or map to see its details.
         </div>
 
-        <div v-else-if="selected.level === 'sub'" class="flex flex-col gap-3">
-          <h2 class="text-xl font-semibold text-ink-gray-9">{{ selected.node.title }}</h2>
-          <p class="text-sm text-ink-gray-7">
-            {{ selected.node.description || 'No description.' }}
-          </p>
-          <Button class="w-fit" variant="subtle" @click="newMap(selected.node)">Add Map</Button>
-        </div>
+        <template v-else-if="selected.level === 'sub'">
+          <div class="flex items-center gap-3 border-b border-outline-gray-1 px-6 py-3">
+            <div class="min-w-0 flex-1">
+              <h2 class="truncate text-base font-semibold text-ink-gray-9">
+                {{ selected.node.title }}
+              </h2>
+              <p v-if="selected.node.description" class="truncate text-xs text-ink-gray-5">
+                {{ selected.node.description }}
+              </p>
+            </div>
+            <span class="shrink-0 text-xs text-ink-gray-5">
+              {{ selected.node.maps.length }} {{ selected.node.maps.length === 1 ? 'map' : 'maps' }}
+            </span>
+            <Button variant="subtle" size="sm" @click="newMap(selected.node)">
+              <template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
+              Add Map
+            </Button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-3">
+            <p v-if="!selected.node.maps.length" class="py-10 text-center text-sm text-ink-gray-5">
+              No maps yet. Add one to start capturing this sub process.
+            </p>
+            <div v-else class="flex flex-col gap-0.5">
+              <button
+                v-for="map in selected.node.maps"
+                :key="map.name"
+                class="flex h-9 items-center gap-2 rounded px-3 text-left text-sm hover:bg-surface-gray-2"
+                @click="openMap(map)"
+              >
+                <FeatherIcon name="git-branch" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
+                <span class="min-w-0 flex-1 truncate text-ink-gray-8">{{ map.map_title }}</span>
+                <MapBadge :map-type="map.map_type" />
+                <span class="w-24 shrink-0 text-right text-xs text-ink-gray-5">{{ map.status }}</span>
+              </button>
+            </div>
+          </div>
+        </template>
 
-        <div v-else class="flex flex-col gap-3">
-          <h2 class="text-xl font-semibold text-ink-gray-9">{{ selected.node.process_name }}</h2>
-          <dl class="grid grid-cols-2 gap-y-2 text-sm">
-            <dt class="text-ink-gray-5">Value Stream</dt>
-            <dd class="text-ink-gray-8">{{ selected.node.value_stream || '—' }}</dd>
-            <dt class="text-ink-gray-5">Category</dt>
-            <dd class="text-ink-gray-8">{{ selected.node.category || '—' }}</dd>
-            <dt class="text-ink-gray-5">Status</dt>
-            <dd class="text-ink-gray-8">{{ selected.node.status }}</dd>
-          </dl>
-          <Button class="w-fit" variant="subtle" @click="newSub(selected.node)">
-            Add Sub Process
-          </Button>
-        </div>
+        <template v-else>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-outline-gray-1 px-6 py-3">
+            <h2 class="text-base font-semibold text-ink-gray-9">{{ selected.node.process_name }}</h2>
+            <span class="text-xs text-ink-gray-5">
+              <span class="text-ink-gray-4">Value Stream</span> {{ selected.node.value_stream || '—' }}
+            </span>
+            <span class="text-xs text-ink-gray-5">
+              <span class="text-ink-gray-4">Category</span> {{ selected.node.category || '—' }}
+            </span>
+            <span class="rounded bg-surface-gray-3 px-1.5 py-0.5 text-xs font-medium text-ink-gray-7">
+              {{ selected.node.status }}
+            </span>
+            <Button class="ml-auto" variant="subtle" size="sm" @click="newSub(selected.node)">
+              <template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
+              Add Sub Process
+            </Button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-3">
+            <p v-if="!selected.node.sub_processes.length" class="py-10 text-center text-sm text-ink-gray-5">
+              No sub processes yet. Add one to start breaking this process down.
+            </p>
+            <div v-else class="flex flex-col gap-0.5">
+              <button
+                v-for="sub in selected.node.sub_processes"
+                :key="sub.name"
+                class="flex h-9 items-center gap-2 rounded px-3 text-left text-sm hover:bg-surface-gray-2"
+                @click="selected = { level: 'sub', node: sub }"
+              >
+                <FeatherIcon name="folder" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
+                <span class="min-w-0 flex-1 truncate text-ink-gray-8">{{ sub.title }}</span>
+                <span class="w-20 shrink-0 text-right text-xs text-ink-gray-5">
+                  {{ sub.maps.length }} {{ sub.maps.length === 1 ? 'map' : 'maps' }}
+                </span>
+              </button>
+            </div>
+          </div>
+        </template>
       </section>
     </div>
 

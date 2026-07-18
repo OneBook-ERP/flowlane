@@ -15,10 +15,15 @@ import frappe
 
 @frappe.whitelist()
 def get_clients() -> list[dict]:
-	"""Clients for the home grid, each with its process count for the tile."""
+	"""Clients for the home grid, each with its process count for the tile.
+
+	``modified`` feeds the UI-REVAMP D2 "edited Nd ago" card/list content
+	(formatted client-side by src/format/relativeTime.js) — no extra query,
+	Frappe already tracks it on every doctype.
+	"""
 	clients = frappe.get_all(
 		"Flowlane Client",
-		fields=["name", "client_name", "industry_vertical", "status"],
+		fields=["name", "client_name", "industry_vertical", "status", "modified"],
 		order_by="client_name asc",
 	)
 	for client in clients:

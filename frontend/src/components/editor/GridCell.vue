@@ -13,6 +13,7 @@ import { masterOptions } from '@/data/masters.js'
 import { doctypeOptions } from '@/data/erpnext.js'
 import { nodeTypeColor } from '@/diagram/nodeColors.js'
 import { useMapStore } from '@/stores/useMapStore.js'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
   column: { type: Object, required: true },
@@ -22,6 +23,13 @@ const props = defineProps({
 const store = useMapStore()
 
 const value = computed(() => props.step[props.column.field] ?? '')
+
+// Tweak panel's "Table text: Ellipsis / Wrap" (UI step U4, §5). Only applies
+// to the long free-text columns that ellipsize in the first place — Wrap
+// swaps those to a small textarea (rows genuinely grow) instead of a
+// single-line input with a hover tooltip; short fields are unaffected either
+// way.
+const wrapMode = computed(() => props.column.ellipsis && uiPrefs.tableTextMode === 'wrap')
 
 const options = computed(() => {
   if (props.column.type === 'master') return masterOptions(props.column.master)
@@ -55,7 +63,18 @@ function onInput(next) {
     />
   </div>
 
-  <!-- free-text: ellipsis when unfocused, full value on hover -->
+  <!-- free-text, Wrap mode: full text visible, rows genuinely grow -->
+  <FormControl
+    v-else-if="column.type === 'text' && wrapMode"
+    class="w-full"
+    type="textarea"
+    :rows="2"
+    size="sm"
+    :modelValue="value"
+    @update:modelValue="onInput"
+  />
+
+  <!-- free-text, Ellipsis mode (default): single line, full value on hover -->
   <Tooltip v-else-if="column.type === 'text'" :text="tipText" :disabled="!tipText" :hover-delay="0.4">
     <FormControl
       class="gridcell-text w-full"

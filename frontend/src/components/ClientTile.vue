@@ -1,8 +1,13 @@
 <script setup>
-// One client "folder" tile on the home grid (S1). Clicking the body opens the
-// client workspace; the ⋯ menu offers rename / delete. Status tints the pill.
+// One client "folder" card on the home grid (S1, UI-REVAMP D2). Clicking the
+// body opens the client workspace; the ⋯ menu offers rename / delete. Status
+// tints the pill. Density-aware (compact grid target: 6-8 per row) via the
+// Tweak panel's Density toggle (uiPrefs.js); realistic scan content —
+// industry, status, process count, last-edited — instead of a bare name.
 import { computed } from 'vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
+import { uiPrefs } from '@/ui/uiPrefs.js'
+import { relativeTime } from '@/format/relativeTime.js'
 
 const props = defineProps({ client: { type: Object, required: true } })
 const emit = defineEmits(['open', 'rename', 'delete'])
@@ -16,6 +21,15 @@ const statusClass = computed(
     })[props.client.status] || 'bg-surface-gray-3 text-ink-gray-6'
 )
 
+const editedLabel = computed(() => {
+  const label = relativeTime(props.client.modified)
+  return label ? `edited ${label}` : ''
+})
+
+const compact = computed(() => uiPrefs.density === 'compact')
+const padding = computed(() => (compact.value ? 'p-3' : 'p-4'))
+const gap = computed(() => (compact.value ? 'gap-2' : 'gap-3'))
+
 const menuItems = [
   { label: 'Rename', onClick: () => emit('rename', props.client) },
   { label: 'Delete', onClick: () => emit('delete', props.client) },
@@ -24,12 +38,14 @@ const menuItems = [
 
 <template>
   <div
-    class="group relative flex cursor-pointer flex-col gap-3 rounded-lg border border-outline-gray-1 bg-surface-white p-4 transition-colors hover:border-outline-gray-3 hover:bg-surface-gray-1"
+    class="group relative flex cursor-pointer flex-col rounded-lg border border-outline-gray-1 bg-surface-white transition-colors hover:border-outline-gray-3 hover:bg-surface-gray-1"
+    :class="[padding, gap]"
     @click="emit('open', client)"
   >
     <div class="flex items-start justify-between">
       <div
-        class="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-blue-2 text-xl"
+        class="flex items-center justify-center rounded-lg bg-surface-blue-2 text-lg"
+        :class="compact ? 'h-8 w-8' : 'h-10 w-10 text-xl'"
       >
         📁
       </div>
@@ -42,19 +58,20 @@ const menuItems = [
         </button>
       </Dropdown>
     </div>
-    <div>
+    <div class="min-w-0">
       <div class="truncate font-medium text-ink-gray-9">{{ client.client_name }}</div>
-      <div class="mt-0.5 text-sm text-ink-gray-5">
+      <div class="mt-0.5 truncate text-sm text-ink-gray-5">
         {{ client.industry_vertical || 'No vertical' }}
       </div>
     </div>
-    <div class="flex items-center justify-between">
-      <span class="rounded px-1.5 py-0.5 text-xs font-medium" :class="statusClass">
+    <div class="flex items-center justify-between gap-2">
+      <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium" :class="statusClass">
         {{ client.status }}
       </span>
-      <span class="text-xs text-ink-gray-5">
+      <span class="truncate text-xs text-ink-gray-5">
         {{ client.process_count }} {{ client.process_count === 1 ? 'process' : 'processes' }}
       </span>
     </div>
+    <div v-if="editedLabel" class="text-xs text-ink-gray-4">{{ editedLabel }}</div>
   </div>
 </template>

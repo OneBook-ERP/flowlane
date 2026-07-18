@@ -20,10 +20,12 @@ import ConnectionEditorDialog from './ConnectionEditorDialog.vue'
 import PainPointDialog from './PainPointDialog.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { doctypes } from '@/data/erpnext.js'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const store = useMapStore()
 const columns = COLUMNS
 const offsets = stickyLeftOffsets()
+const headerY = computed(() => (uiPrefs.density === 'relaxed' ? 'py-3' : 'py-2'))
 
 const pasteOpen = ref(false)
 const connection = ref({ open: false, uid: '' })
@@ -98,19 +100,19 @@ function openPainPoints(uid) {
         </colgroup>
         <thead class="sticky top-0 z-20 bg-surface-gray-2 text-left text-xs font-medium text-ink-gray-6">
           <tr>
-            <th class="sticky left-0 z-30 bg-surface-gray-2 px-2 py-2">#</th>
+            <th class="sticky left-0 z-30 bg-surface-gray-2 px-2" :class="headerY">#</th>
             <th
               v-for="column in columns"
               :key="column.field"
-              class="truncate px-2 py-2 font-medium"
-              :class="column.sticky ? 'sticky z-30 bg-surface-gray-2' : ''"
+              class="truncate px-2 font-medium"
+              :class="[headerY, column.sticky ? 'sticky z-30 bg-surface-gray-2' : '']"
               :style="column.sticky ? { left: offsets[column.field] + 'px' } : null"
             >
               {{ column.label }}
             </th>
-            <th class="px-2 py-2 font-medium">Connections</th>
-            <th v-if="isAsIs" class="px-2 py-2 font-medium">Pain</th>
-            <th class="sticky right-0 z-30 bg-surface-gray-2 px-2 py-2"></th>
+            <th class="px-2 font-medium" :class="headerY">Connections</th>
+            <th v-if="isAsIs" class="px-2 font-medium" :class="headerY">Pain</th>
+            <th class="sticky right-0 z-30 bg-surface-gray-2 px-2" :class="headerY"></th>
           </tr>
         </thead>
         <tbody class="bg-surface-white">

@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ClientListRow: typeof import('./src/components/ClientListRow.vue')['default']
     ClientTile: typeof import('./src/components/ClientTile.vue')['default']
     ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
     ConnectionEditorDialog: typeof import('./src/components/editor/ConnectionEditorDialog.vue')['default']
@@ -38,6 +39,7 @@ declare module 'vue' {
     SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']
     TableTab: typeof import('./src/components/editor/TableTab.vue')['default']
     TreeRail: typeof import('./src/components/workspace/TreeRail.vue')['default']
+    TweakPanel: typeof import('./src/components/TweakPanel.vue')['default']
     WizardTab: typeof import('./src/components/editor/WizardTab.vue')['default']
     WorkspaceTopBar: typeof import('./src/components/workspace/WorkspaceTopBar.vue')['default']
   }

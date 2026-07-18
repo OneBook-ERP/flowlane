@@ -9,6 +9,7 @@ import { Button, FeatherIcon, Tooltip } from 'frappe-ui'
 import { COLUMNS, stickyLeftOffsets } from './columns.js'
 import GridCell from './GridCell.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
   step: { type: Object, required: true },
@@ -25,16 +26,23 @@ const painCount = computed(() => (props.step.pain_points || []).length)
 // Pain points are an As-Is concern; hide the column's control on To-Be maps.
 const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
+// Tweak panel Density (D1, §5): compact rows (~36px, B1) vs a roomier row for
+// side-by-side comparison. Only the vertical padding changes — column widths
+// and sticky behaviour stay identical either way.
+const cellY = computed(() => (uiPrefs.density === 'relaxed' ? 'py-2.5' : 'py-1'))
+
 // A pinned cell needs a solid backdrop (so scrolled cells don't bleed through) that
 // still tracks the row hover; group-hover keeps it in step with the rest of the row.
-const pinnedCell =
-  'sticky z-10 bg-surface-white group-hover:bg-surface-gray-1'
+const pinnedCell = 'sticky z-10 bg-surface-white group-hover:bg-surface-gray-1'
 </script>
 
 <template>
   <tr class="group border-b border-outline-gray-1 hover:bg-surface-gray-1">
     <!-- order + row number (pinned lane) -->
-    <td class="sticky left-0 z-10 whitespace-nowrap bg-surface-white px-2 py-1 align-middle group-hover:bg-surface-gray-1">
+    <td
+      class="sticky left-0 z-10 whitespace-nowrap bg-surface-white px-2 align-middle group-hover:bg-surface-gray-1"
+      :class="cellY"
+    >
       <div class="flex items-center gap-1">
         <div class="flex flex-col">
           <Tooltip text="Move up">
@@ -64,15 +72,15 @@ const pinnedCell =
     <td
       v-for="column in columns"
       :key="column.field"
-      class="px-1 py-1 align-top"
-      :class="column.sticky ? pinnedCell : ''"
+      class="px-1 align-top"
+      :class="[cellY, column.sticky ? pinnedCell : '']"
       :style="column.sticky ? { left: offsets[column.field] + 'px' } : null"
     >
       <GridCell :column="column" :step="step" />
     </td>
 
     <!-- connections -->
-    <td class="px-2 py-1 align-middle">
+    <td class="px-2 align-middle" :class="cellY">
       <Tooltip text="Edit outgoing connections">
         <Button variant="subtle" size="sm" @click="emit('edit-connections', step.uid)">
           <template #prefix><FeatherIcon name="git-branch" class="h-3.5 w-3.5" /></template>
@@ -82,7 +90,7 @@ const pinnedCell =
     </td>
 
     <!-- pain points (As-Is only) -->
-    <td v-if="isAsIs" class="px-2 py-1 align-middle">
+    <td v-if="isAsIs" class="px-2 align-middle" :class="cellY">
       <Tooltip text="Record As-Is pain points">
         <Button
           variant="subtle"
@@ -97,7 +105,7 @@ const pinnedCell =
     </td>
 
     <!-- delete -->
-    <td class="sticky right-0 z-10 bg-surface-white px-2 py-1 align-middle group-hover:bg-surface-gray-1">
+    <td class="sticky right-0 z-10 bg-surface-white px-2 align-middle group-hover:bg-surface-gray-1" :class="cellY">
       <Tooltip text="Delete step">
         <Button variant="ghost" size="sm" @click="store.removeStep(step.uid)">
           <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-3" /></template>

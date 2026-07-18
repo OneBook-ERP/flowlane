@@ -16,6 +16,7 @@ import ConnectionsList from './ConnectionsList.vue'
 import PainPointEditor from './PainPointEditor.vue'
 import { COLUMNS, columnsByGroup } from './columns.js'
 import { nodeTypeColor } from '@/diagram/nodeColors.js'
+import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
   step: { type: Object, required: true },
@@ -56,6 +57,9 @@ watch(tabs, (list) => {
 })
 
 const dotClass = computed(() => nodeTypeColor(props.step.node_type).dot)
+
+// Tweak panel Density (D1): ~32px-tall field rows vs a roomier stack.
+const fieldGap = computed(() => (uiPrefs.density === 'relaxed' ? 'gap-4' : 'gap-3'))
 </script>
 
 <template>
@@ -88,7 +92,7 @@ const dotClass = computed(() => nodeTypeColor(props.step.node_type).dot)
       </button>
     </nav>
 
-    <div v-if="activeTab.kind === 'fields'" class="flex flex-col gap-3">
+    <div v-if="activeTab.kind === 'fields'" class="flex flex-col" :class="fieldGap">
       <div v-for="field in activeTab.fields" :key="field.field" class="flex flex-col gap-1">
         <label class="text-xs font-medium text-ink-gray-6">{{ field.label }}</label>
         <GridCell :column="field" :step="step" />
