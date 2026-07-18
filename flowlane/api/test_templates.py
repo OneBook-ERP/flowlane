@@ -26,20 +26,12 @@ class TestApplyTemplates(IntegrationTestCase):
 		process = frappe.get_doc(
 			"Flowlane Process", {"client": self.client.name, "process_name": "Quote-to-Cash"}
 		)
-		self.addCleanup(lambda: frappe.delete_doc(process.doctype, process.name, force=True))
+		self._cleanup_process("Quote-to-Cash")
 		subs = frappe.get_all(
 			"Flowlane Sub Process",
 			filters={"parent_process": process.name},
 			pluck="title",
 			order_by="sequence asc",
-		)
-		self.addCleanup(
-			lambda: [
-				frappe.delete_doc("Flowlane Sub Process", s, force=True)
-				for s in frappe.get_all(
-					"Flowlane Sub Process", filters={"parent_process": process.name}, pluck="name"
-				)
-			]
 		)
 		self.assertEqual(
 			subs,
@@ -48,6 +40,27 @@ class TestApplyTemplates(IntegrationTestCase):
 				"Fulfilment", "Invoicing & Collections",
 			],
 		)
+
+	def test_creates_a_default_as_is_map_per_sub_process(self):
+		# A consultant maps current-state before future-state, so every
+		# seeded sub process should start with exactly one As-Is map (not
+		# zero — that would leave the tree with nothing to click into).
+		api.apply_templates(self.client.name, ["Manufacturing"])
+		self._cleanup_process("Plan-to-Produce")
+
+		process = frappe.db.get_value(
+			"Flowlane Process", {"client": self.client.name, "process_name": "Plan-to-Produce"}
+		)
+		subs = frappe.get_all("Flowlane Sub Process", filters={"parent_process": process}, pluck="name")
+		self.assertEqual(len(subs), 4)
+		for sub in subs:
+			maps = frappe.get_all(
+				"Flowlane Process Map", filters={"sub_process": sub}, fields=["map_type", "direction", "status"]
+			)
+			self.assertEqual(len(maps), 1)
+			self.assertEqual(maps[0].map_type, "As-Is")
+			self.assertEqual(maps[0].direction, "Top-to-Bottom")
+			self.assertEqual(maps[0].status, "Draft")
 
 	def test_reapplying_same_module_skips_existing_process(self):
 		first = api.apply_templates(self.client.name, ["Buying"])
@@ -71,8 +84,16 @@ class TestApplyTemplates(IntegrationTestCase):
 		if not name:
 			return
 		self.addCleanup(lambda: frappe.delete_doc("Flowlane Process", name, force=True))
-		for sub in frappe.get_all("Flowlane Sub Process", filters={"parent_process": name}, pluck="name"):
+		subs = frappe.get_all("Flowlane Sub Process", filters={"parent_process": name}, pluck="name")
+		for sub in subs:
+			# Delete order matters: Sub Process.on_trash blocks while a Process
+			# Map exists under it, and Process.on_trash blocks while a Sub
+			# Process exists — so maps must go first, subs second (addCleanup
+			# runs LIFO, so register maps-for-this-sub AFTER the sub itself).
 			self.addCleanup(lambda s=sub: frappe.delete_doc("Flowlane Sub Process", s, force=True))
+			maps = frappe.get_all("Flowlane Process Map", filters={"sub_process": sub}, pluck="name")
+			for map_name in maps:
+				self.addCleanup(lambda m=map_name: frappe.delete_doc("Flowlane Process Map", m, force=True))
 
 	def test_unknown_client_raises(self):
 		with self.assertRaises(frappe.ValidationError):

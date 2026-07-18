@@ -94,7 +94,7 @@ def _create_sub_processes(process: str, template_name: str) -> None:
 		order_by="idx asc",
 	)
 	for row in rows:
-		frappe.get_doc(
+		sub_process = frappe.get_doc(
 			{
 				"doctype": "Flowlane Sub Process",
 				"parent_process": process,
@@ -103,3 +103,18 @@ def _create_sub_processes(process: str, template_name: str) -> None:
 				"description": row.description,
 			}
 		).insert()
+		_create_default_map(sub_process.name)
+
+
+def _create_default_map(sub_process: str) -> None:
+	# A consultant maps current-state before designing future-state (SPEC's
+	# As-Is -> To-Be flow), so the seeded starting point is one As-Is map per
+	# sub process, direction/status left to the doctype's own defaults
+	# (Top-to-Bottom / Draft) so this stays in sync if those ever change.
+	frappe.get_doc(
+		{
+			"doctype": "Flowlane Process Map",
+			"sub_process": sub_process,
+			"map_type": "As-Is",
+		}
+	).insert()
