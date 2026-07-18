@@ -21,6 +21,7 @@ import { svgToPng } from '@/diagram/thumbnail.js'
 import { doctypes } from '@/data/erpnext.js'
 import { nodeTypeColor } from '@/diagram/nodeColors.js'
 import { severityChip, maxSeverity } from '@/ui/chipColors.js'
+import { nodeIndicators } from '@/diagram/nodeIndicators.js'
 import RisksStrip from './RisksStrip.vue'
 
 const store = useMapStore()
@@ -55,6 +56,43 @@ const painCounts = computed(() => {
   })
   return counts
 })
+
+// Detail indicators (UI step U6): a couple of high-signal fields (see
+// diagram/nodeIndicators.js for the policy — pure and unit-tested there) get
+// a tiny icon on the node so hidden StepInspector detail reads as "there's
+// more here" without a full field-by-field canvas view. Keyed by engine
+// step_id (== row uid), same pattern as painCounts above.
+const nodeIndicatorsByStepId = computed(() => {
+  const map = {}
+  store.state.steps.forEach((row) => {
+    const indicators = nodeIndicators(row)
+    if (indicators.length) map[row.uid] = indicators
+  })
+  return map
+})
+
+// Layout for the indicator icons: a small row along the node's BOTTOM edge,
+// right-aligned — deliberately the opposite corner from the pain-point badge
+// (top-right) so the two never compete for the same pixels. Not pure (needs
+// the node's live rendered x/y/w/h from the engine) so it stays here rather
+// than in nodeIndicators.js.
+const INDICATOR_SIZE = 10
+const INDICATOR_GAP = 2
+function indicatorLayout(node) {
+  const list = nodeIndicatorsByStepId.value[node.step_id]
+  if (!list) return []
+  const w = node.w || 150
+  const h = node.h || 58
+  const rightEdge = node.x + w / 2 - 6
+  const y = node.y + h / 2 - INDICATOR_SIZE - 4
+  const totalWidth = list.length * INDICATOR_SIZE + (list.length - 1) * INDICATOR_GAP
+  const startX = rightEdge - totalWidth
+  return list.map((indicator, i) => ({
+    ...indicator,
+    x: startX + i * (INDICATOR_SIZE + INDICATOR_GAP),
+    y,
+  }))
+}
 
 // Node-type hue lookup by engine step_id (== row uid) — the SAME color
 // source Table's GridCell dot and StepInspector's header dot use
@@ -484,6 +522,26 @@ function labelStrip(lane) {
             >
               {{ painCounts[node.step_id].count }}
             </text>
+          </g>
+          <!-- detail indicators (UI step U6): a couple of high-signal fields
+               that only otherwise show in the StepInspector (Integrations,
+               Controls/Approvals, Exceptions) get a tiny icon along the
+               BOTTOM edge — see diagram/nodeIndicators.js for which fields
+               and why. Monochrome/small so they read as "more detail here"
+               without competing with the node's own color or the
+               pain-point badge, which stays in the opposite (top-right)
+               corner. -->
+          <g v-for="ind in indicatorLayout(node)" :key="ind.key">
+            <title>{{ ind.title }}</title>
+            <FeatherIcon
+              :name="ind.icon"
+              :x="ind.x"
+              :y="ind.y"
+              width="10"
+              height="10"
+              :strokeWidth="2"
+              color="#64748b"
+            />
           </g>
         </g>
       </svg>

@@ -417,3 +417,24 @@ rather than declaring its own Tailwind classes or hex for the same concept:
   (`column.ellipsis`) between the single-line-+ tooltip input (default) and a
   small multi-line `textarea` that genuinely wraps (row height grows — no
   fixed row height exists to fight).
+
+## UI step U6 — final review: checklist fixes + node detail indicators
+Bug A (Table's Node Type dot invisible/unclickable) and Bug B (Export
+teleport silently not mounting) are documented inline as code comments at
+their fix sites (`GridCell.vue`'s dot branch, `MapWorkspace.vue`'s
+`Teleport defer`) rather than duplicated here.
+
+- **`src/diagram/nodeIndicators.js`** (new, pure, unit-tested): of the 11
+  non-core Map Step fields that otherwise ONLY show in the StepInspector
+  (Trigger/Input, Workflow State, Business Rules, …), exactly three —
+  `integrations`, `controls_approvals`, `exceptions` — get a small icon on
+  the Diagram node when non-blank, a deliberately narrow exception to
+  "canvas = identity + flow, inspector = detail" so a step with hidden
+  detail reads as "there's more here" at a glance. `nodeIndicators(step)`
+  is the pure "which fields count" policy; `DiagramTab.vue`'s
+  `indicatorLayout(node)` does the (non-pure, needs live engine geometry)
+  bottom-right row layout — deliberately the opposite corner from the
+  pain-point badge (top-right) so the two never compete for the same
+  pixels. Rendered via `FeatherIcon` nested directly inside the node's
+  `<g>` (nested `<svg x y width height>` is valid SVG; Vue's namespace
+  inheritance handles a component-rendered `<svg>` root fine here).
