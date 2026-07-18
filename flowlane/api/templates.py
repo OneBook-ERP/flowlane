@@ -90,7 +90,7 @@ def _create_sub_processes(process: str, template_name: str) -> None:
 	rows = frappe.get_all(
 		"Flowlane Sub Process Template",
 		filters={"parenttype": "Flowlane Process Template", "parent": template_name},
-		fields=["title", "sequence", "description"],
+		fields=["name", "title", "sequence", "description"],
 		order_by="idx asc",
 	)
 	for row in rows:
@@ -103,18 +103,79 @@ def _create_sub_processes(process: str, template_name: str) -> None:
 				"description": row.description,
 			}
 		).insert()
-		_create_default_map(sub_process.name)
+		_create_default_map(sub_process.name, row.name)
 
 
-def _create_default_map(sub_process: str) -> None:
+def _create_default_map(sub_process: str, sub_process_template: str) -> None:
 	# A consultant maps current-state before designing future-state (SPEC's
 	# As-Is -> To-Be flow), so the seeded starting point is one As-Is map per
 	# sub process, direction/status left to the doctype's own defaults
 	# (Top-to-Bottom / Draft) so this stays in sync if those ever change.
-	frappe.get_doc(
+	process_map = frappe.get_doc(
 		{
 			"doctype": "Flowlane Process Map",
 			"sub_process": sub_process,
 			"map_type": "As-Is",
 		}
 	).insert()
+	_populate_map_steps(process_map.name, sub_process_template)
+
+
+def _populate_map_steps(process_map: str, sub_process_template: str) -> None:
+	"""Copy the template's steps + connections onto the new map.
+
+	Two passes, same shape as ``map.save_steps``' uid->name resolution: a
+	step_key is only stable within its own template, so every step must exist
+	as a real Map Step (with a real ``name``) before any connection can point
+	at one.
+	"""
+	step_templates = frappe.get_all(
+		"Flowlane Map Step Template",
+		filters={"sub_process_template": sub_process_template},
+		fields=["name", "step_key", "step_name", "lane_role", "node_type", "sequence"],
+		order_by="sequence asc",
+	)
+
+	step_key_to_step = {}
+	for template in step_templates:
+		step_key_to_step[template.step_key] = frappe.get_doc(
+			{
+				"doctype": "Flowlane Map Step",
+				"process_map": process_map,
+				"step_id": template.step_key,
+				"step_name": template.step_name,
+				"lane_role": template.lane_role,
+				"node_type": template.node_type,
+				"sequence": template.sequence,
+			}
+		).insert()
+
+	for template in step_templates:
+		_apply_step_connections(template, step_key_to_step)
+
+
+def _apply_step_connections(template, step_key_to_step: dict) -> None:
+	connections = frappe.get_all(
+		"Flowlane Map Step Template Connection",
+		filters={"parenttype": "Flowlane Map Step Template", "parent": template.name},
+		fields=["to_step_key", "label"],
+		order_by="idx asc",
+	)
+	if not connections:
+		return
+	step = step_key_to_step[template.step_key]
+	for connection in connections:
+		target = step_key_to_step.get(connection.to_step_key)
+		if not target:
+			# The template's own steps are internally consistent by
+			# construction (flowlane.process_catalog) -- an unresolved key
+			# here means the source template itself was miswired.
+			frappe.throw(
+				frappe._(
+					"Template step {0} connects to unknown step key {1} — the source template {2} is inconsistent."
+				).format(
+					frappe.bold(template.step_key), frappe.bold(connection.to_step_key), template.name
+				)
+			)
+		step.append("connections", {"to_step": target.name, "label": connection.label})
+	step.save()

@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from flowlane.api import templates as api
+from flowlane.process_catalog import CATALOG
 
 
 class TestApplyTemplates(IntegrationTestCase):
@@ -61,6 +62,62 @@ class TestApplyTemplates(IntegrationTestCase):
 			self.assertEqual(maps[0].map_type, "As-Is")
 			self.assertEqual(maps[0].direction, "Top-to-Bottom")
 			self.assertEqual(maps[0].status, "Draft")
+
+	def test_applying_module_creates_maps_with_matching_step_counts(self):
+		api.apply_templates(self.client.name, ["Manufacturing"])
+		self._cleanup_process("Plan-to-Produce")
+
+		process = frappe.db.get_value(
+			"Flowlane Process", {"client": self.client.name, "process_name": "Plan-to-Produce"}
+		)
+		subs = frappe.get_all(
+			"Flowlane Sub Process", filters={"parent_process": process}, fields=["name", "title"]
+		)
+		self.assertEqual(len(subs), 4)
+		for sub in subs:
+			expected = len(CATALOG["Manufacturing"][sub.title])
+			map_name = frappe.db.get_value("Flowlane Process Map", {"sub_process": sub.name}, "name")
+			step_count = frappe.db.count("Flowlane Map Step", {"process_map": map_name})
+			self.assertEqual(
+				step_count, expected, f"{sub.title} expected {expected} steps, got {step_count}"
+			)
+
+	def test_decision_branches_resolve_to_correct_targets_and_labels(self):
+		# Selling's Opportunity & Quotation S3 "Approve Discount?" ->
+		# Yes->S5 (Send Quotation), No->S4 (Revise Quotation).
+		api.apply_templates(self.client.name, ["Selling"])
+		self._cleanup_process("Quote-to-Cash")
+
+		process = frappe.db.get_value(
+			"Flowlane Process", {"client": self.client.name, "process_name": "Quote-to-Cash"}
+		)
+		sub_process = frappe.db.get_value(
+			"Flowlane Sub Process", {"parent_process": process, "title": "Opportunity & Quotation"}
+		)
+		map_name = frappe.db.get_value("Flowlane Process Map", {"sub_process": sub_process}, "name")
+		step_s3 = frappe.get_doc("Flowlane Map Step", {"process_map": map_name, "step_id": "S3"})
+		self.assertEqual(step_s3.step_name, "Approve Discount?")
+
+		resolved = {
+			c.label: frappe.db.get_value("Flowlane Map Step", c.to_step, "step_id")
+			for c in step_s3.connections
+		}
+		self.assertEqual(resolved, {"Yes": "S5", "No": "S4"})
+
+	def test_reapplying_does_not_duplicate_steps(self):
+		api.apply_templates(self.client.name, ["Buying"])
+		self._cleanup_process("Procure-to-Pay")
+		api.apply_templates(self.client.name, ["Buying"])  # skipped, process already exists
+
+		process = frappe.db.get_value(
+			"Flowlane Process", {"client": self.client.name, "process_name": "Procure-to-Pay"}
+		)
+		sub_process = frappe.db.get_value(
+			"Flowlane Sub Process", {"parent_process": process, "title": "Payment"}
+		)
+		map_name = frappe.db.get_value("Flowlane Process Map", {"sub_process": sub_process}, "name")
+		step_count = frappe.db.count("Flowlane Map Step", {"process_map": map_name})
+		self.assertEqual(step_count, len(CATALOG["Buying"]["Payment"]))
 
 	def test_reapplying_same_module_skips_existing_process(self):
 		first = api.apply_templates(self.client.name, ["Buying"])
