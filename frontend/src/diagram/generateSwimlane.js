@@ -23,7 +23,7 @@ const NODE_H = 58
 const COL_GAP = 220 // centre-to-centre spacing along the flow axis
 const LANE_SIZE = 130 // cross-axis thickness of one lane band
 const MARGIN = 40
-const LANE_GUTTER = 150 // room for lane role labels on the cross-axis start
+const LABEL_GUTTER = 140 // reserved at the FLOW start for lane role labels
 const SIBLING_OFFSET = 16 // nudge overlapping parallel edges apart
 
 const DEFAULT_SHAPES = {
@@ -55,6 +55,7 @@ export function generateSwimlane(steps, direction = 'TB', options = {}) {
     edges: routed,
     width: geometry.width,
     height: geometry.height,
+    labelGutter: LABEL_GUTTER, // flow-start strip that holds the lane labels
     direction: dir,
   }
 }
@@ -234,41 +235,58 @@ function placeNodes(nodes, columns, laneIndex, dir) {
   })
 }
 
-// Centre of the (column, lane) cell. TB: columns run down (y), lanes across (x).
-// LR: columns run right (x), lanes down (y).
+// Centre of the (column, lane) cell. The flow axis carries the columns and starts
+// after LABEL_GUTTER so lane labels have room; the cross axis carries the lanes.
+// TB: columns run down (y), lanes across (x). LR: columns run right (x), lanes
+// down (y).
 function cellCenter(col, lane, dir) {
-  const flow = MARGIN + NODE_W / 2 + col * COL_GAP
-  const cross = LANE_GUTTER + lane * LANE_SIZE + LANE_SIZE / 2
+  const half = dir === 'TB' ? NODE_H / 2 : NODE_W / 2
+  const flow = LABEL_GUTTER + half + col * COL_GAP
+  const cross = MARGIN + lane * LANE_SIZE + LANE_SIZE / 2
   return dir === 'TB' ? { x: cross, y: flow } : { x: flow, y: cross }
 }
 
 function layoutBands(lanes, placed, columns, dir) {
   const maxCol = maxValue(columns)
-  const flowLength = MARGIN * 2 + NODE_W + maxCol * COL_GAP
-  const crossLength = LANE_GUTTER + lanes.length * LANE_SIZE + MARGIN
+  const flowSpan = LABEL_GUTTER + NODE_W + maxCol * COL_GAP + MARGIN
+  const crossSpan = MARGIN * 2 + lanes.length * LANE_SIZE
 
   const bands = lanes.map((lane) => {
-    const pos = LANE_GUTTER + lane.index * LANE_SIZE
+    const pos = MARGIN + lane.index * LANE_SIZE
     const label = laneLabel(pos, dir)
     return {
       role: lane.role,
       index: lane.index,
       pos, // cross-axis start of the band
       size: LANE_SIZE,
-      length: flowLength, // flow-axis extent of the band
+      length: flowSpan, // flow-axis extent of the band
       labelX: label.x,
       labelY: label.y,
     }
   })
 
-  return dir === 'TB'
-    ? { lanes: bands, width: crossLength, height: flowLength }
-    : { lanes: bands, width: flowLength, height: crossLength }
+  // Grow the canvas if a dragged node sits past the computed bounds.
+  const base = dir === 'TB'
+    ? { width: crossSpan, height: flowSpan }
+    : { width: flowSpan, height: crossSpan }
+  return { lanes: bands, ...expandToNodes(base, placed) }
 }
 
+// Lane label rides the FLOW start: the top strip for TB (centred over the band),
+// the left strip for LR (left-aligned within the gutter).
 function laneLabel(pos, dir) {
   const center = pos + LANE_SIZE / 2
-  return dir === 'TB' ? { x: center, y: MARGIN / 2 } : { x: MARGIN / 2, y: center }
+  return dir === 'TB' ? { x: center, y: LABEL_GUTTER / 2 } : { x: 12, y: center }
+}
+
+function expandToNodes(size, placed) {
+  let width = size.width
+  let height = size.height
+  placed.forEach((node) => {
+    width = Math.max(width, node.x + node.w / 2 + MARGIN)
+    height = Math.max(height, node.y + node.h / 2 + MARGIN)
+  })
+  return { width, height }
 }
 
 // --- edge routing (orthogonal elbows) -------------------------------------

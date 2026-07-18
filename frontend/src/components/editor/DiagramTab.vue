@@ -168,6 +168,14 @@ function bandRect(lane) {
     ? { x: lane.pos, y: 0, width: lane.size, height: diagram.value.height }
     : { x: 0, y: lane.pos, width: diagram.value.width, height: lane.size }
 }
+
+// The lane-label header: the flow-start slice of the band (top for TB, left for LR).
+function labelStrip(lane) {
+  const gutter = diagram.value.labelGutter
+  return direction.value === 'TB'
+    ? { x: lane.pos, y: 0, width: lane.size, height: gutter }
+    : { x: 0, y: lane.pos, width: gutter, height: lane.size }
+}
 </script>
 
 <template>
@@ -235,13 +243,20 @@ function bandRect(lane) {
             stroke="#e2e8f0"
             stroke-width="1"
           />
+          <!-- label header strip at the flow start -->
+          <rect
+            v-bind="labelStrip(lane)"
+            fill="#e2e8f0"
+            stroke="#cbd5e1"
+            stroke-width="1"
+          />
           <text
             :x="lane.labelX"
             :y="lane.labelY"
-            fill="#475569"
-            font-size="12"
+            fill="#334155"
+            font-size="11"
             font-weight="600"
-            text-anchor="middle"
+            :text-anchor="direction === 'TB' ? 'middle' : 'start'"
             dominant-baseline="middle"
           >
             {{ lane.role || 'Unassigned' }}
