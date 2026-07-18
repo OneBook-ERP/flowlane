@@ -1,22 +1,17 @@
 <script setup>
-// As-Is / To-Be badge for a map node. As-Is (current state) reads amber; To-Be
-// (target state) reads green — a quick visual cue in the tree and detail pane.
+// As-Is / To-Be badge for a map node. Color comes from the centralized
+// chipColors.js (UI-REVAMP §3) — this component is now a thin wrapper over
+// the shared StatusChip so map-type coloring lives in exactly one place
+// alongside status/severity, not duplicated here.
 import { computed } from 'vue'
+import StatusChip from './StatusChip.vue'
+import { mapTypeChip } from '@/ui/chipColors.js'
 
 const props = defineProps({ mapType: { type: String, required: true } })
 
-const classes = computed(() =>
-  props.mapType === 'To-Be'
-    ? 'bg-surface-green-2 text-ink-green-3'
-    : 'bg-surface-amber-2 text-ink-amber-3'
-)
+const classes = computed(() => mapTypeChip(props.mapType).classes)
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
-    :class="classes"
-  >
-    {{ mapType }}
-  </span>
+  <StatusChip :label="mapType" :classes="classes" />
 </template>

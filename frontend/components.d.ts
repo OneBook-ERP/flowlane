@@ -33,6 +33,7 @@ declare module 'vue' {
     RenameDialog: typeof import('./src/components/RenameDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    StatusChip: typeof import('./src/components/StatusChip.vue')['default']
     StepInspector: typeof import('./src/components/editor/StepInspector.vue')['default']
     StepRow: typeof import('./src/components/editor/StepRow.vue')['default']
     SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']

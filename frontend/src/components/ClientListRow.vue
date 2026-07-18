@@ -6,18 +6,13 @@
 import { computed } from 'vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import { relativeTime } from '@/format/relativeTime.js'
+import { clientStatusChip } from '@/ui/chipColors.js'
+import StatusChip from '@/components/StatusChip.vue'
 
 const props = defineProps({ client: { type: Object, required: true } })
 const emit = defineEmits(['open', 'rename', 'delete'])
 
-const statusClass = computed(
-  () =>
-    ({
-      Active: 'bg-surface-green-2 text-ink-green-3',
-      Prospect: 'bg-surface-amber-2 text-ink-amber-3',
-      Archived: 'bg-surface-gray-3 text-ink-gray-6',
-    })[props.client.status] || 'bg-surface-gray-3 text-ink-gray-6'
-)
+const statusClass = computed(() => clientStatusChip(props.client.status).classes)
 
 const editedLabel = computed(() => relativeTime(props.client.modified) || '—')
 
@@ -38,9 +33,7 @@ const menuItems = [
       {{ client.industry_vertical || 'No vertical' }}
     </span>
     <span class="w-24 shrink-0">
-      <span class="rounded px-1.5 py-0.5 text-xs font-medium" :class="statusClass">
-        {{ client.status }}
-      </span>
+      <StatusChip :label="client.status" :classes="statusClass" />
     </span>
     <span class="hidden w-28 shrink-0 text-right text-xs text-ink-gray-5 md:block">
       {{ client.process_count }} {{ client.process_count === 1 ? 'process' : 'processes' }}
