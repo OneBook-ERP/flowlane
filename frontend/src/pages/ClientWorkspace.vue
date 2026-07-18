@@ -40,7 +40,15 @@ const route = useRoute()
 const router = useRouter()
 
 const tree = loadClientTree(props.client)
-const selected = ref(null) // { node, level } — process/sub only; a map is `activeMap`
+// Identity only ({level, name}) — NOT the node object itself. A mutation
+// (add/edit/delete sub-process or map) calls reload(), which replaces
+// tree.data wholesale; a raw object reference captured at select-time would
+// go stale and the detail pane would keep showing pre-mutation data even
+// though the toast says the change succeeded (found live: adding a second
+// sub process to an already-selected process didn't appear until the user
+// re-clicked it). `selected` below re-resolves this against the current
+// `processes` on every read instead, so it can never go stale.
+const selectedKey = ref(null)
 const railCollapsed = ref(false)
 
 // Dialog state. `edit` carries the node when editing, null when creating.
@@ -52,6 +60,23 @@ const busy = ref(false)
 
 const processes = computed(() => tree.data?.processes || [])
 const activeMap = computed(() => route.query.map || null)
+
+// Re-look-up the selected process/sub by name against the live `processes`
+// tree on every access — see selectedKey's comment above.
+const selected = computed(() => {
+  if (!selectedKey.value) return null
+  const { level, name } = selectedKey.value
+  if (level === 'sub') {
+    for (const process of processes.value) {
+      const sub = process.sub_processes.find((s) => s.name === name)
+      if (sub) return { level, node: sub }
+    }
+    return null
+  }
+  const process = processes.value.find((p) => p.name === name)
+  return process ? { level, node: process } : null
+})
+
 const selectedName = computed(() => activeMap.value || selected.value?.node?.name || '')
 const crumbs = computed(() =>
   breadcrumbTrail(processes.value, { mapName: activeMap.value, selected: selected.value })
@@ -92,18 +117,18 @@ function selectNode(node) {
     openMap(node.node)
     return
   }
-  selected.value = node
+  selectedKey.value = { level: node.level, name: node.node.name }
   clearActiveMap()
 }
 
 function crumbClick(crumb) {
   if (crumb.level === 'map') return // already active, nothing to do
-  selected.value = { level: crumb.level, node: crumb.node }
+  selectedKey.value = { level: crumb.level, name: crumb.node.name }
   clearActiveMap()
 }
 
 function goHome() {
-  selected.value = null
+  selectedKey.value = null
   clearActiveMap()
 }
 
@@ -167,7 +192,7 @@ async function runDelete() {
   try {
     await deleteDialog.run()
     toast.success('Deleted.')
-    selected.value = null
+    selectedKey.value = null
     clearActiveMap()
     deleteDialog.open = false
     reload()
@@ -303,7 +328,7 @@ async function moveSub({ process, sub, direction }) {
                 v-for="sub in selected.node.sub_processes"
                 :key="sub.name"
                 class="flex h-9 items-center gap-2 rounded px-3 text-left text-sm hover:bg-surface-gray-2"
-                @click="selected = { level: 'sub', node: sub }"
+                @click="selectedKey = { level: 'sub', name: sub.name }"
               >
                 <FeatherIcon name="folder" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
                 <span class="min-w-0 flex-1 truncate text-ink-gray-8">{{ sub.title }}</span>

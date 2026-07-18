@@ -153,7 +153,13 @@ function addBranch() {
 
       <!-- current step panel -->
       <div v-if="currentStep" class="flex min-w-0 flex-1 flex-col overflow-auto">
-        <div class="flex-1 px-6 py-4">
+        <!-- Not flex-1: short tabs (General, Logic & Rules) have few fields,
+             and stretching this to fill the scroll container left a large
+             dead gap between the fields and the Prev/Next footer below. Let
+             it size to content so the footer follows directly; any leftover
+             space lands below the footer instead (a normal, un-alarming
+             pattern — unlike floating actions with a gap above them). -->
+        <div class="px-6 py-4">
           <StepInspector :step="currentStep" :is-as-is="isAsIs" />
         </div>
 
