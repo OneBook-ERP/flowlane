@@ -298,6 +298,78 @@ these be compared live rather than committed blind.
   process's sub-processes (click to drill in) or the sub-process's maps (click
   to open), reusing data the tree resource already loaded (no new backend
   call).
+## UI step U5 — color system + severity chips + pain-point strip (§3, §4)
+Two sibling, pure color-mapping modules are the ONLY places a status/type/
+severity/node-type color is decided — every consumer imports one of them
+rather than declaring its own Tailwind classes or hex for the same concept:
+- `src/diagram/nodeColors.js` (from U1) — Node Type hue only (`dot` class +
+  `hex`). Consumers: `GridCell.vue`'s node-type dot (Table, D6),
+  `StepInspector.vue`'s header dot, and (new in U5) `DiagramTab.vue`'s SVG
+  node fill/stroke.
+- `src/ui/chipColors.js` (new in U5) — everything else: `statusChip()` (Map
+  *and* Process workflow status — Draft/In Review/Approved, one vocabulary
+  shared by both DocTypes), `mapTypeChip()` (As-Is/To-Be), `clientStatusChip()`
+  (Active/Prospect/Archived), and `severityChip()` (pain-point Low/Medium/
+  High, plus `maxSeverity()`/`severityRank()` for picking one color when
+  several severities apply to the same node/map). Each returns `{ classes }`
+  (a `bg-surface-<hue>-2 text-ink-<hue>-3` or neutral-gray pair) and, where an
+  SVG consumer needs it (severity), a matching `hex`.
+- `src/components/StatusChip.vue` — the one chip DOM shape (rounded,
+  px-1.5 py-0.5, text-xs font-medium) every HTML consumer of chipColors.js
+  renders through, so "chip" markup isn't repeated per component.
+  `MapBadge.vue` is now a thin wrapper over `StatusChip` + `mapTypeChip()`
+  (same external API — every existing `:map-type="..."` call site is
+  unchanged). SVG contexts (the Diagram's pain-point badge circle) use a
+  `severityChip(...).hex` directly — an SVG element can't take Tailwind
+  classes.
+- Status chips render everywhere a Map/Process status or map type is
+  DISPLAYED: `HierarchyTree.vue`'s map rows, `WorkspaceTopBar.vue`'s
+  breadcrumb, and `ClientWorkspace.vue`'s process/sub-process detail lists.
+  `MapSettingsInspector.vue`'s Status field stays a plain `FormControl`
+  select (it's the one place status is *edited*, not just shown) — Type
+  there was already a read-only `MapBadge`, unchanged.
+- Severity chips render in `PainPointEditor.vue` (next to each pain point's
+  severity select) and in the new Risks strip (below). `DiagramTab.vue`'s
+  per-node pain-point badge (built in Phase 5) now colors by
+  `maxSeverity()` of that node's pain points instead of a hardcoded red.
+- **Diagram color adoption (§3's flagged U1 gap):** `DiagramTab.vue` no
+  longer renders flat white node fills. Each node's shape now gets a light
+  node-type tint (`fill-opacity="0.16"` over `nodeTypeColor(...).hex`) plus a
+  matching-hue border (replacing the old generic slate stroke); the blue
+  selection highlight still overrides both on click. Lookup is by the row's
+  `node_type` (via `store.findStep`-equivalent maps keyed by uid == engine
+  `step_id`, the same trick `painCounts` already used) since the pure
+  `generateSwimlane.js` engine's output nodes don't carry `node_type` — this
+  is chrome-only, the engine/layout logic is untouched.
+- **Risks strip (§4):** `src/diagram/risks.js` (`collectRisks(steps)`, pure,
+  unit-tested) flattens an As-Is map's `pain_points` across all steps into a
+  worst-first list; `components/editor/RisksStrip.vue` renders it under the
+  Diagram canvas (As-Is maps only, hidden entirely when there are no pain
+  points) with severity chips + step label, reading `store.state.steps`
+  directly — no new API call. Clicking a row sets `DiagramTab.vue`'s
+  `selectedUid`, opening that node in the shared Inspector exactly like a
+  canvas click.
+- **Known gap, not built:** a pain-point count badge on TreeRail's map rows
+  (browsing the tree WITHOUT opening a map) needs a per-map aggregate the
+  tree API doesn't return today — `get_client_tree`'s `_maps()` (`tree.py`)
+  fields are `name, map_title, map_type, direction, status, version_label`
+  only; pain points live on Map Step child rows the tree query never joins.
+  Adding that count would mean touching backend/API surface, which UI-step
+  guardrails say to stop and report rather than guess at — the Diagram's own
+  per-node badge and the Risks strip (both already-loaded-map-scoped, no new
+  fetch) deliver the rest of §4 without it.
+- **CTA audit (§3 "one primary CTA per screen"):** Diagram's toolbar had
+  zero `solid` buttons (Toggle direction / Auto-arrange / Add Node were all
+  `subtle`) while Table ("Add Row") and Wizard ("Add first step"/"Add next
+  step") each already had exactly one — promoted Add Node to `solid` for
+  parity. `ClientWorkspace.vue`'s process/sub-process detail screens (no map
+  open) had zero `solid` buttons either ("Add Sub Process"/"Add Map" were
+  `subtle`) — promoted both. Export (`ExportMenu.vue`, teleported into the
+  top bar) stays `subtle` deliberately: it's persistent chrome visible across
+  all three tabs, and making it `solid` would put two solid buttons on
+  screen at once whenever Table or Wizard's own primary action is also
+  visible.
+
 - **§5 remaining toggles:** `TreeRail.vue`'s `treeTheme` swaps to a dark rail
   background — `HierarchyTree.vue` is reused unchanged (per U2's convention)
   so the dark variant recolors it as a unit via a scoped `:deep()` block using
