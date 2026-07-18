@@ -8,9 +8,11 @@ and bulk-write endpoints: one round-trip loads the header + steps + child rows,
 and one transactional call upserts/deletes the whole step set.
 """
 
+import base64
 import json
 
 import frappe
+from frappe.utils.file_manager import save_file
 
 # Scalar Map Step fields the Table tab reads and writes (everything except the
 # child tables and the record name). Keep in sync with the frontend STEP_FIELDS.
@@ -179,6 +181,38 @@ def _apply_connections(doc, step: dict, uid_map: dict) -> None:
 			},
 		)
 	doc.save()
+
+
+@frappe.whitelist()
+def set_thumbnail(map: str, png: str) -> str:
+	"""Store a client-rendered PNG as the Process Map thumbnail (T3.4).
+
+	``png`` is a base64 data URL (``data:image/png;base64,...``). The previous
+	thumbnail file is removed so repeated saves do not pile up attachments.
+	Returns the new file URL.
+	"""
+	if not frappe.db.exists("Flowlane Process Map", map):
+		frappe.throw(frappe._("Process Map {0} not found.").format(map))
+
+	content = base64.b64decode(png.split(",", 1)[-1])
+	_clear_old_thumbnail(map)
+	file = save_file(
+		f"flowlane-map-{map}.png",
+		content,
+		"Flowlane Process Map",
+		map,
+		is_private=0,
+	)
+	frappe.db.set_value("Flowlane Process Map", map, "thumbnail", file.file_url)
+	return file.file_url
+
+
+def _clear_old_thumbnail(map: str) -> None:
+	old = frappe.db.get_value("Flowlane Process Map", map, "thumbnail")
+	if not old:
+		return
+	for name in frappe.get_all("File", filters={"file_url": old}, pluck="name"):
+		frappe.delete_doc("File", name, ignore_permissions=True, force=True)
 
 
 @frappe.whitelist()

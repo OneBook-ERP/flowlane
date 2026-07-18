@@ -27,6 +27,26 @@ def get_masters() -> dict[str, list[dict]]:
 	return {key: _options(doctype) for key, (doctype, _) in _MASTERS.items()}
 
 
+@frappe.whitelist()
+def get_diagram_meta() -> dict:
+	"""Lookups the swimlane engine needs but the plain dropdowns omit:
+
+	``node_shapes`` maps a Node Type name -> its shape, and ``lane_order`` maps a
+	Lane Role name -> its ``sort_order`` (used to order lane bands). Fetched once
+	by the Diagram tab and passed into ``generateSwimlane``.
+	"""
+	shapes = frappe.get_all(
+		"Flowlane Node Type", fields=["name", "shape"]
+	)
+	roles = frappe.get_all(
+		"Flowlane Lane Role", fields=["name", "sort_order"]
+	)
+	return {
+		"node_shapes": {row.name: row.shape for row in shapes},
+		"lane_order": {row.name: row.sort_order or 0 for row in roles},
+	}
+
+
 def _options(doctype: str) -> list[dict]:
 	names = frappe.get_all(doctype, pluck="name", order_by="name asc")
 	return [{"label": name, "value": name} for name in names]

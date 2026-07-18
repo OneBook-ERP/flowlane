@@ -65,6 +65,31 @@ describe('toSavePayload', () => {
   })
 })
 
+describe('manual position round-trip (T3.7)', () => {
+  it('blank rows start with no manual position', () => {
+    const step = blankStep()
+    expect(step.manual_x).toBeNull()
+    expect(step.manual_y).toBeNull()
+  })
+
+  it('loads numeric manual positions from the server row', () => {
+    const step = fromServerStep({ name: 'a', manual_x: 120.5, manual_y: 40 })
+    expect(step.manual_x).toBe(120.5)
+    expect(step.manual_y).toBe(40)
+  })
+
+  it('sends positions as numbers, and null (never "") when unset', () => {
+    const payload = toSavePayload([
+      { uid: 'a', name: '', manual_x: 300, manual_y: 90, connections: [] },
+      { uid: 'b', name: '', manual_x: null, manual_y: null, connections: [] },
+    ])
+    expect(payload[0].manual_x).toBe(300)
+    expect(payload[0].manual_y).toBe(90)
+    expect(payload[1].manual_x).toBeNull()
+    expect(payload[1].manual_y).toBeNull()
+  })
+})
+
 describe('mergeUidMap', () => {
   it('copies saved names onto new rows so they update next save', () => {
     const steps = [

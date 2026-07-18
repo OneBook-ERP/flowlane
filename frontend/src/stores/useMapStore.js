@@ -91,6 +91,24 @@ export function createMapStore(mapName) {
     }
   }
 
+  // --- header operations --------------------------------------------------
+
+  // Persist the Diagram tab's TB<->LR toggle on the Process Map and reflect it in
+  // the shared header so the diagram re-flows immediately.
+  async function setDirection(direction) {
+    if (state.header.direction === direction) return
+    state.header.direction = direction
+    try {
+      await call('frappe.client.set_value', {
+        doctype: 'Flowlane Process Map',
+        name: mapName,
+        fieldname: { direction },
+      })
+    } catch (error) {
+      state.error = serverMessage(error)
+    }
+  }
+
   // --- row operations -----------------------------------------------------
 
   function addStep(overrides) {
@@ -170,9 +188,11 @@ export function createMapStore(mapName) {
 
   return {
     state,
+    mapName,
     load,
     save,
     scheduleSave,
+    setDirection,
     addStep,
     addRows,
     removeStep,

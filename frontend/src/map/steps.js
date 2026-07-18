@@ -24,6 +24,10 @@ export const STEP_FIELDS = [
   'kpis',
 ]
 
+// Layout overrides set by dragging a node in the Diagram tab. Kept out of
+// STEP_FIELDS because they are optional Floats (null = auto-place, not '').
+export const POSITION_FIELDS = ['manual_x', 'manual_y']
+
 let uidCounter = 0
 
 // Stable client-side row identity. Connections reference a target row by its uid,
@@ -37,6 +41,7 @@ export function newUid() {
 export function blankStep(overrides = {}) {
   const step = { uid: newUid(), name: '', connections: [], pain_points: [] }
   STEP_FIELDS.forEach((field) => (step[field] = ''))
+  POSITION_FIELDS.forEach((field) => (step[field] = null))
   step.node_type = 'Process/Task'
   return Object.assign(step, overrides)
 }
@@ -47,6 +52,7 @@ export function blankStep(overrides = {}) {
 export function fromServerStep(row) {
   const step = { uid: row.name, name: row.name, connections: [], pain_points: [] }
   STEP_FIELDS.forEach((field) => (step[field] = row[field] ?? ''))
+  POSITION_FIELDS.forEach((field) => (step[field] = numberOrNull(row[field])))
   step.connections = (row.connections || []).map((conn) => ({
     to_uid: conn.to_step || '',
     label: conn.label || '',
@@ -65,6 +71,7 @@ export function toSavePayload(steps) {
     uid: step.uid,
     name: step.name || '',
     ...pickScalars(step),
+    ...pickPositions(step),
     sequence: index + 1,
     connections: (step.connections || [])
       .filter((conn) => conn.to_uid && liveUids.has(conn.to_uid))
@@ -95,4 +102,17 @@ function pickScalars(step) {
     values[field] = step[field] ?? ''
   })
   return values
+}
+
+// Send manual positions as numbers (or null to clear), never '' — the backend
+// fields are Float and an empty string would coerce to 0 and pin nodes at 0.
+function pickPositions(step) {
+  const values = {}
+  POSITION_FIELDS.forEach((field) => (values[field] = numberOrNull(step[field])))
+  return values
+}
+
+function numberOrNull(value) {
+  const n = typeof value === 'string' ? Number(value) : value
+  return Number.isFinite(n) ? n : null
 }
