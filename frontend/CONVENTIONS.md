@@ -77,16 +77,53 @@ Shared, presentation-only where possible; pages own state + mutations.
   `NewMapDialog.vue` — each `v-model`-driven, emits `saved`, and self-toasts.
 
 ## Map editor mount point (Phases 2–4)
-`pages/MapEditor.vue` is the stable stub. The **Wizard / Table / Diagram** tabs mount
-inside its `#editor-tabs` container. Recommended structure for Phase 2+:
-- `src/map/` — pure, browser-free domain logic (e.g. Phase 3
-  `map/generateSwimlane.js` + vitest), mirroring `data/reorder.js`.
-- `src/stores/useMapStore.js` — the single Map Step store (rows + connections +
-  pain points); Wizard, Table, and Diagram all read/write it (one data set, three
-  views). Create it once in `MapEditor.vue` and `provide`/`inject` it.
-- `src/components/editor/` — `MapTabs.vue`, `WizardTab.vue`, `TableTab.vue`,
-  `DiagramTab.vue`. Backing APIs (to add): `flowlane.api.map.get_map` /
-  `save_steps` / `set_thumbnail` (`validate_graph` already exists).
+`pages/MapEditor.vue` mounts the **Wizard / Table / Diagram** tabs (`MapTabs.vue`)
+inside its `#editor-tabs` container. Phase 2 wired this: `MapEditor.vue` creates the
+store with `provideMapStore(map)`, calls `store.load()` on mount, and renders
+`MapTabs`. Later phases only fill the Wizard / Diagram panels — do not re-wire this.
+- `src/map/` — pure, browser-free domain logic + vitest, mirroring `data/reorder.js`.
+  Phase 2 added `pasteParser.js` (Excel block → field maps) and `steps.js` (row
+  factories, `toSavePayload`, `mergeUidMap`). Phase 3 adds `generateSwimlane.js`.
+- `src/components/editor/` — `MapTabs.vue`, `TableTab.vue`, `StepRow.vue`,
+  `GridCell.vue`, `ConnectionEditorDialog.vue`, `PasteDialog.vue`, `columns.js`
+  (Phase 2). Wizard/Diagram tabs are labelled placeholders in `MapTabs.vue` for
+  Phases 3–4 to fill.
+- `src/data/erpnext.js` — cached `doctypes` resource for the ERPNext DocType picker
+  (`flowlane.api.erpnext.get_doctypes`). Read options with `doctypeOptions()`.
+
+### Editor store contract (`src/stores/useMapStore.js`) — SHARED, created in Phase 2
+The single Map Step store; Wizard, Table and Diagram all read/write it (one data
+set, three views). `MapEditor.vue` calls `provideMapStore(map)`; child tabs get it
+with `useMapStore()` (provide/inject via an internal Symbol).
+- **`store.state`** (reactive): `header` (map doc fields), `steps` (row array),
+  `loading`, `saving`, `dirty`, `error` (a `serverMessage` string).
+- **Row shape:** `{ uid, name, ...STEP_FIELDS, connections:[{to_uid,label,condition}],
+  pain_points:[...] }`. `uid` is the stable client identity — loaded rows use their
+  server `name` as uid; new rows get a generated uid until `save` fills `name` in.
+  **Connections reference the target row by `to_uid`, never by step_id/name**, so
+  reorders and step_id edits never break an edge; `save_steps` resolves uid → name.
+- **Methods:** `load()`, `save()` (immediate), `scheduleSave()` (debounced 1s
+  autosave — every mutator already calls it), `addStep(overrides?)`,
+  `addRows(fieldMaps)`, `removeStep(uid)` (also strips inbound edges),
+  `moveStep(from,to)` / `moveStepBy(uid,delta)` (persists `sequence` via array
+  order), `setField(uid,field,value)`, `addConnection`/`setConnection`/
+  `removeConnection`, `findStep(uid)`.
+- **Persistence:** `save()` sends `toSavePayload(steps)` (dense `sequence`, dropped
+  dangling edges) to `flowlane.api.map.save_steps`, then `mergeUidMap` promotes new
+  rows to saved. Saves are serialised (one in flight; a queued edit re-saves after).
+- Mutating logic that is pure (payload build, reconcile, paste parse) lives in
+  `src/map/*` and is unit-tested; the store is the thin reactive/network shell.
+
+### Backend map/erpnext APIs (added Phase 2)
+- `flowlane.api.map.get_map(map)` → `{ map: header, steps: [...with connections &
+  pain_points] }`, steps ordered by `sequence`.
+- `flowlane.api.map.save_steps(map, steps)` — single transactional bulk
+  upsert/delete of steps + child rows; `steps` is a JSON array of rows with `uid`,
+  optional `name`, scalars, and `connections:[{to_uid,...}]`. Returns
+  `{ map, steps, uid_map }`. Server guards (duplicate `step_id`, cross-map edge)
+  roll the whole save back and surface via `_server_messages` → `serverMessage`.
+- `flowlane.api.erpnext.get_doctypes(module?)` → selectable DocTypes as
+  `[{label,value}]`. (`validate_graph` unchanged; `set_thumbnail` still to add.)
 
 ## State approach
 - Server state lives in frappe-ui resources (`data/*`); reload after writes.

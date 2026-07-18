@@ -2,12 +2,183 @@
 # For license information, please see license.txt
 """Process Map graph helpers.
 
-Phase 0 ships only ``validate_graph`` as a non-blocking checker: it surfaces
-warnings (dangling edges, missing/extra Start nodes, unreachable steps) but never
-raises. Bulk step save/load APIs arrive in later phases.
+``validate_graph`` is a non-blocking checker (dangling edges, missing/extra Start
+nodes, unreachable steps). ``get_map`` / ``save_steps`` are the Table tab's read
+and bulk-write endpoints: one round-trip loads the header + steps + child rows,
+and one transactional call upserts/deletes the whole step set.
 """
 
+import json
+
 import frappe
+
+# Scalar Map Step fields the Table tab reads and writes (everything except the
+# child tables and the record name). Keep in sync with the frontend STEP_FIELDS.
+STEP_FIELDS = (
+	"step_id",
+	"step_name",
+	"lane_role",
+	"node_type",
+	"sequence",
+	"trigger_input",
+	"output_result",
+	"erpnext_module",
+	"erpnext_doctype",
+	"workflow_state",
+	"key_data_fields",
+	"business_rules",
+	"exceptions",
+	"controls_approvals",
+	"integrations",
+	"kpis",
+	"manual_x",
+	"manual_y",
+)
+
+
+@frappe.whitelist()
+def get_map(map: str) -> dict:
+	"""Map header plus its steps, each with connections and pain points."""
+	if not frappe.db.exists("Flowlane Process Map", map):
+		frappe.throw(frappe._("Process Map {0} not found.").format(map))
+
+	header = frappe.db.get_value(
+		"Flowlane Process Map",
+		map,
+		["name", "map_title", "map_type", "direction", "status", "version_label", "sub_process"],
+		as_dict=True,
+	)
+	return {"map": header, "steps": _load_steps(map)}
+
+
+@frappe.whitelist()
+def save_steps(map: str, steps) -> dict:
+	"""Transactional bulk upsert/delete of a map's steps and their child rows.
+
+	``steps`` is a JSON array of rows carrying a client ``uid``, an optional
+	existing ``name``, the scalar fields, and ``connections`` keyed by target
+	``to_uid``. New rows are inserted, changed rows updated, and any step missing
+	from the payload is deleted — all in the single request transaction, so a
+	server guard (duplicate ``step_id``, cross-map edge) rolls the whole save back.
+	Returns ``uid_map`` (client uid -> saved name) plus the fresh map state.
+	"""
+	if not frappe.db.exists("Flowlane Process Map", map):
+		frappe.throw(frappe._("Process Map {0} not found.").format(map))
+	if isinstance(steps, str):
+		steps = json.loads(steps)
+
+	_delete_removed_steps(map, steps)
+	uid_map = _upsert_steps(map, steps)
+	result = get_map(map)
+	result["uid_map"] = uid_map
+	return result
+
+
+def _load_steps(map: str) -> list[dict]:
+	rows = frappe.get_all(
+		"Flowlane Map Step",
+		filters={"process_map": map},
+		fields=["name", *STEP_FIELDS],
+		order_by="sequence asc, creation asc",
+	)
+	for row in rows:
+		row["connections"] = frappe.get_all(
+			"Flowlane Step Connection",
+			filters={"parenttype": "Flowlane Map Step", "parent": row["name"]},
+			fields=["to_step", "label", "condition"],
+			order_by="idx asc",
+		)
+		row["pain_points"] = frappe.get_all(
+			"Flowlane Pain Point",
+			filters={"parenttype": "Flowlane Map Step", "parent": row["name"]},
+			fields=["description", "pain_type", "severity"],
+			order_by="idx asc",
+		)
+	return rows
+
+
+def _delete_removed_steps(map: str, steps: list[dict]) -> None:
+	"""Delete steps that exist for the map but are absent from the payload."""
+	keep = {s.get("name") for s in steps if s.get("name")}
+	existing = frappe.get_all(
+		"Flowlane Map Step", filters={"process_map": map}, pluck="name"
+	)
+	for name in existing:
+		if name not in keep:
+			# on_trash nulls inbound edges, so surviving rows keep no dangling refs.
+			frappe.delete_doc("Flowlane Map Step", name)
+
+
+def _upsert_steps(map: str, steps: list[dict]) -> dict:
+	"""Create/update every step (scalars + pain points), then wire connections.
+
+	Two passes: the first assigns names to new rows so the second can resolve each
+	connection's ``to_uid`` to a real Map Step name within this map.
+	"""
+	uid_map = {}
+	docs = []
+	for step in steps:
+		doc = _get_or_new(map, step)
+		_apply_scalars(doc, step)
+		_apply_pain_points(doc, step)
+		doc.set("connections", [])
+		doc.save()
+		uid_map[step.get("uid")] = doc.name
+		docs.append((doc, step))
+
+	for doc, step in docs:
+		_apply_connections(doc, step, uid_map)
+	return uid_map
+
+
+def _get_or_new(map: str, step: dict):
+	name = step.get("name")
+	if name and frappe.db.exists("Flowlane Map Step", name):
+		return frappe.get_doc("Flowlane Map Step", name)
+	doc = frappe.new_doc("Flowlane Map Step")
+	doc.process_map = map
+	return doc
+
+
+def _apply_scalars(doc, step: dict) -> None:
+	for field in STEP_FIELDS:
+		if field in step:
+			doc.set(field, step.get(field))
+
+
+def _apply_pain_points(doc, step: dict) -> None:
+	doc.set("pain_points", [])
+	for point in step.get("pain_points") or []:
+		if not point.get("description"):
+			continue
+		doc.append(
+			"pain_points",
+			{
+				"description": point.get("description"),
+				"pain_type": point.get("pain_type"),
+				"severity": point.get("severity") or "Medium",
+			},
+		)
+
+
+def _apply_connections(doc, step: dict, uid_map: dict) -> None:
+	connections = step.get("connections") or []
+	if not connections:
+		return
+	doc.set("connections", [])
+	for conn in connections:
+		target = uid_map.get(conn.get("to_uid"))
+		if not target:
+			continue  # target was deleted in this same save — drop the edge
+		doc.append(
+			"connections",
+			{
+				"to_step": target,
+				"label": conn.get("label"),
+				"condition": conn.get("condition"),
+			},
+		)
+	doc.save()
 
 
 @frappe.whitelist()

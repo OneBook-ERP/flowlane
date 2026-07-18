@@ -13,14 +13,20 @@ declare module 'vue' {
   export interface GlobalComponents {
     ClientTile: typeof import('./src/components/ClientTile.vue')['default']
     ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
+    ConnectionEditorDialog: typeof import('./src/components/editor/ConnectionEditorDialog.vue')['default']
+    GridCell: typeof import('./src/components/editor/GridCell.vue')['default']
     HierarchyTree: typeof import('./src/components/HierarchyTree.vue')['default']
     MapBadge: typeof import('./src/components/MapBadge.vue')['default']
+    MapTabs: typeof import('./src/components/editor/MapTabs.vue')['default']
     NewClientDialog: typeof import('./src/components/NewClientDialog.vue')['default']
     NewMapDialog: typeof import('./src/components/NewMapDialog.vue')['default']
+    PasteDialog: typeof import('./src/components/editor/PasteDialog.vue')['default']
     ProcessDialog: typeof import('./src/components/ProcessDialog.vue')['default']
     RenameDialog: typeof import('./src/components/RenameDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    StepRow: typeof import('./src/components/editor/StepRow.vue')['default']
     SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']
+    TableTab: typeof import('./src/components/editor/TableTab.vue')['default']
   }
 }

@@ -1,21 +1,21 @@
 <script setup>
-// Map Editor (S6) — PHASE 1 STUB. The Wizard / Table / Diagram tabs are built in
-// Phases 2-4 and will mount inside `#editor-tabs` below (see CONVENTIONS.md).
-// For now this confirms the /m/:map route resolves and shows the map header.
-import { computed } from 'vue'
+// Map Editor (S6). Creates the single Map Step store for this map, provides it to
+// the editor tabs, and mounts the tab bar (Table this phase; Wizard / Diagram in
+// later phases) inside `#editor-tabs`. The header reads from the store once loaded.
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createResource, Button } from 'frappe-ui'
+import { Button } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
+import MapTabs from '@/components/editor/MapTabs.vue'
+import { provideMapStore } from '@/stores/useMapStore.js'
 
 const props = defineProps({ map: { type: String, required: true } })
 const router = useRouter()
 
-const mapDoc = createResource({
-  url: 'frappe.client.get',
-  params: { doctype: 'Flowlane Process Map', name: props.map },
-  auto: true,
-})
-const header = computed(() => mapDoc.data || {})
+const store = provideMapStore(props.map)
+const header = computed(() => store.state.header || {})
+
+onMounted(() => store.load())
 </script>
 
 <template>
@@ -30,17 +30,9 @@ const header = computed(() => mapDoc.data || {})
       </div>
     </header>
 
-    <!-- Phase 2-4 mount the Wizard / Table / Diagram tabs here. -->
-    <div
-      id="editor-tabs"
-      class="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
-    >
-      <div class="text-3xl">🚧</div>
-      <p class="text-base font-medium text-ink-gray-8">Map editor coming soon</p>
-      <p class="max-w-md text-sm text-ink-gray-5">
-        The Wizard, Table, and Diagram tabs land in Phases 2-4. This route is the
-        stable mount point for them.
-      </p>
+    <!-- The Wizard / Table / Diagram tabs mount here (see CONVENTIONS.md). -->
+    <div id="editor-tabs" class="min-h-0 flex-1">
+      <MapTabs />
     </div>
   </div>
 </template>
