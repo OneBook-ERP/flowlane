@@ -17,6 +17,7 @@ import { diagramMeta, nodeShapeMap, laneOrderMap } from '@/data/diagramMeta.js'
 import { generateSwimlane } from '@/diagram/generateSwimlane.js'
 import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
+import { doctypes } from '@/data/erpnext.js'
 import DiagramNodePanel from './DiagramNodePanel.vue'
 
 const store = useMapStore()
@@ -30,6 +31,9 @@ const selectedStep = computed(() => store.findStep(selectedUid.value) || null)
 const hasManual = computed(() =>
   store.state.steps.some((s) => s.manual_x !== null || s.manual_y !== null)
 )
+// Pain Points tab only applies to As-Is maps — same rule the Wizard's
+// StepInspector mount uses (PLAN F17).
+const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
@@ -83,6 +87,10 @@ const displayNodes = computed(() =>
 
 onMounted(() => {
   if (!diagramMeta.data) diagramMeta.fetch()
+  // The node panel's ERPNext Setup tab needs the DocType list; Table normally
+  // primes this first (it mounts by default), but fetch defensively here too
+  // since the panel is now genuinely editable (UI step U3).
+  if (!doctypes.data) doctypes.fetch()
 })
 
 // --- regeneration (throttled to animation frames, T3.4/T3.5) --------------
@@ -407,7 +415,7 @@ function labelStrip(lane) {
 
       <DiagramNodePanel
         :step="selectedStep"
-        :steps="store.state.steps"
+        :is-as-is="isAsIs"
         @close="selectedUid = ''"
       />
     </div>

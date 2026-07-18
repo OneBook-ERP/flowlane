@@ -1,9 +1,11 @@
 <script setup>
-// Right-column inspector for the workspace shell (UI step U2/B3). For now this
-// only holds map-level settings — Direction / Status / Version — that used to
-// live on the "Open Editor" dead-end page (ClientWorkspace's old map detail
-// pane). It also reserves the mount point U3 fills with the shared grouped
-// step inspector (Wizard tabs + Diagram node click); do not build that here.
+// Right-column inspector for the workspace shell (UI step U2/B3). This holds
+// ONLY map-level settings — Direction / Status / Version — that used to live on
+// the "Open Editor" dead-end page (ClientWorkspace's old map detail pane).
+// The step-level inspector (UI step U3, D4/D5 — StepInspector.vue) deliberately
+// does NOT mount here: it docks at the Wizard tab and the Diagram node click
+// panel instead, so map-level settings and step-level editing stay visually and
+// structurally separate. See CONVENTIONS.md "The shared step inspector".
 import { ref, computed } from 'vue'
 import { Button, FormControl, FeatherIcon, toast } from 'frappe-ui'
 import { updateMap } from '@/data/tree.js'
@@ -85,14 +87,6 @@ async function setStatus(value) {
           <p class="mb-1 text-xs text-ink-gray-5">Version</p>
           <p class="text-sm text-ink-gray-8">{{ header.version_label || '—' }}</p>
         </div>
-      </div>
-
-      <!-- U3 mount point: the shared grouped step inspector (General / I-O /
-           Logic / ERPNext) docks here, driven by the step selected in Table,
-           Wizard or the Diagram node click. Left as a labelled placeholder so
-           this pass stays a navigation/layout reshell, not a feature build. -->
-      <div class="mt-5 rounded border border-dashed border-outline-gray-2 p-3 text-xs text-ink-gray-4">
-        Step inspector mounts here (U3) — select a step in Table or Diagram.
       </div>
     </div>
   </aside>

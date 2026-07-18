@@ -1,15 +1,15 @@
 <script setup>
 // Wizard tab (S7): guided, one-panel-per-step capture over the SAME shared store
 // as the Table and Diagram (T4.3 — one data set, three views). It walks the map's
-// steps one at a time (Prev/Next + a step-list rail), edits each via WizardStepPanel
-// (Table's GridCell editors), and grows the flow with "Add next step" / "Add branch"
-// (T4.2) — both create a step and a store Step Connection current -> new, then
-// advance to it. No local copy of the steps: navigation is the only local state.
+// steps one at a time (Prev/Next + a step-list rail), edits each via the shared
+// StepInspector (UI step U3 — grouped tabs over Table's GridCell editors, plus
+// Connections/Pain Points tabs), and grows the flow with "Add next step" /
+// "Add branch" (T4.2) — both create a step and a store Step Connection
+// current -> new, then advance to it. No local copy of the steps: navigation is
+// the only local state.
 import { ref, computed, watch, onMounted } from 'vue'
 import { Button, FeatherIcon } from 'frappe-ui'
-import WizardStepPanel from './WizardStepPanel.vue'
-import ConnectionEditorDialog from './ConnectionEditorDialog.vue'
-import PainPointEditor from './PainPointEditor.vue'
+import StepInspector from './StepInspector.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { doctypes } from '@/data/erpnext.js'
 import { isDecisionType, nextBranchLabel, clampIndex } from '@/map/wizard.js'
@@ -17,7 +17,6 @@ import { isDecisionType, nextBranchLabel, clampIndex } from '@/map/wizard.js'
 const store = useMapStore()
 
 const currentUid = ref('')
-const connectionsOpen = ref(false)
 
 const steps = computed(() => store.state.steps)
 const currentIndex = computed(() =>
@@ -33,19 +32,6 @@ const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
   if (store.state.dirty) return 'Unsaved changes'
   return 'All changes saved'
-})
-
-// Outgoing edges of the current step, labelled with the target's step_id / name so
-// the consultant sees the branches without opening the connection editor.
-const outgoing = computed(() => {
-  if (!currentStep.value) return []
-  return currentStep.value.connections.map((conn) => {
-    const target = store.findStep(conn.to_uid)
-    return {
-      label: conn.label,
-      target: target ? `${target.step_id || '?'} — ${target.step_name || 'Untitled'}` : '—',
-    }
-  })
 })
 
 onMounted(() => {
@@ -168,46 +154,7 @@ function addBranch() {
       <!-- current step panel -->
       <div v-if="currentStep" class="flex min-w-0 flex-1 flex-col overflow-auto">
         <div class="flex-1 px-6 py-4">
-          <WizardStepPanel :step="currentStep" />
-
-          <!-- outgoing connections / flow growth -->
-          <div class="mt-6 border-t border-outline-gray-1 pt-4">
-            <div class="mb-2 flex items-center gap-2">
-              <h4 class="text-sm font-medium text-ink-gray-8">Connections</h4>
-              <Button variant="ghost" size="sm" @click="connectionsOpen = true">
-                <template #prefix><FeatherIcon name="git-branch" class="h-3.5 w-3.5" /></template>
-                Edit
-              </Button>
-            </div>
-            <p v-if="!outgoing.length" class="text-xs text-ink-gray-5">
-              No outgoing connections. Use “Add next step” to continue the flow.
-            </p>
-            <ul v-else class="flex flex-col gap-1">
-              <li
-                v-for="(edge, i) in outgoing"
-                :key="i"
-                class="flex items-center gap-2 text-sm text-ink-gray-7"
-              >
-                <FeatherIcon name="arrow-right" class="h-3.5 w-3.5 text-ink-gray-4" />
-                <span>{{ edge.target }}</span>
-                <span
-                  v-if="edge.label"
-                  class="rounded bg-surface-gray-3 px-1.5 py-0.5 text-xs text-ink-gray-6"
-                >
-                  {{ edge.label }}
-                </span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- pain points (As-Is issues, T5.2) -->
-          <div v-if="isAsIs" class="mt-6 border-t border-outline-gray-1 pt-4">
-            <h4 class="mb-2 flex items-center gap-2 text-sm font-medium text-ink-gray-8">
-              <FeatherIcon name="alert-triangle" class="h-3.5 w-3.5 text-ink-red-3" />
-              Pain Points
-            </h4>
-            <PainPointEditor :step="currentStep" />
-          </div>
+          <StepInspector :step="currentStep" :is-as-is="isAsIs" />
         </div>
 
         <!-- navigation + add actions -->
@@ -237,7 +184,5 @@ function addBranch() {
         </div>
       </div>
     </div>
-
-    <ConnectionEditorDialog v-model="connectionsOpen" :uid="currentUid" />
   </div>
 </template>

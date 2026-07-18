@@ -11,27 +11,45 @@
 //   ellipsis -> long free-text: single-line ellipsis + hover tooltip, no hard clip.
 //   dot      -> render a node-type color dot in the cell (D6).
 //   tip      -> show the full value on hover even though the column is wide.
+//   group    -> which StepInspector tab this field belongs to (UI-REVAMP D4):
+//               General / Input/Output / Logic & Rules / ERPNext Setup. Table
+//               ignores this; it renders every field in one wide row.
 //
 // PASTE_FIELDS is the positional column order used by Excel paste (the first six
 // grid columns), documented so the parser and the grid agree — keep those first.
 
+export const GROUPS = ['General', 'Input/Output', 'Logic & Rules', 'ERPNext Setup']
+
 export const COLUMNS = [
-  { field: 'step_id', label: 'Step ID', type: 'text', min: 104, sticky: true },
-  { field: 'step_name', label: 'Step Name', type: 'text', min: 220, sticky: true, tip: true },
-  { field: 'lane_role', label: 'Lane Role', type: 'master', master: 'lane_role', min: 168 },
-  { field: 'node_type', label: 'Node Type', type: 'master', master: 'node_type', min: 172, dot: true },
-  { field: 'trigger_input', label: 'Trigger / Input', type: 'text', min: 200, ellipsis: true },
-  { field: 'output_result', label: 'Output / Result', type: 'text', min: 200, ellipsis: true },
-  { field: 'erpnext_module', label: 'ERPNext Module', type: 'master', master: 'erpnext_module', min: 168 },
-  { field: 'erpnext_doctype', label: 'ERPNext DocType', type: 'doctype', min: 190 },
-  { field: 'workflow_state', label: 'Workflow State', type: 'text', min: 168 },
-  { field: 'key_data_fields', label: 'Key Data Fields', type: 'text', min: 200, ellipsis: true },
-  { field: 'business_rules', label: 'Business Rules', type: 'text', min: 220, ellipsis: true },
-  { field: 'exceptions', label: 'Exceptions', type: 'text', min: 200, ellipsis: true },
-  { field: 'controls_approvals', label: 'Controls / Approvals', type: 'text', min: 200, ellipsis: true },
-  { field: 'integrations', label: 'Integrations', type: 'text', min: 190, ellipsis: true },
-  { field: 'kpis', label: 'KPIs', type: 'text', min: 180, ellipsis: true },
+  { field: 'step_id', label: 'Step ID', type: 'text', min: 104, sticky: true, group: 'General' },
+  { field: 'step_name', label: 'Step Name', type: 'text', min: 220, sticky: true, tip: true, group: 'General' },
+  { field: 'lane_role', label: 'Lane Role', type: 'master', master: 'lane_role', min: 168, group: 'General' },
+  { field: 'node_type', label: 'Node Type', type: 'master', master: 'node_type', min: 172, dot: true, group: 'General' },
+  { field: 'trigger_input', label: 'Trigger / Input', type: 'text', min: 200, ellipsis: true, group: 'Input/Output' },
+  { field: 'output_result', label: 'Output / Result', type: 'text', min: 200, ellipsis: true, group: 'Input/Output' },
+  { field: 'erpnext_module', label: 'ERPNext Module', type: 'master', master: 'erpnext_module', min: 168, group: 'ERPNext Setup' },
+  { field: 'erpnext_doctype', label: 'ERPNext DocType', type: 'doctype', min: 190, group: 'ERPNext Setup' },
+  { field: 'workflow_state', label: 'Workflow State', type: 'text', min: 168, group: 'General' },
+  { field: 'key_data_fields', label: 'Key Data Fields', type: 'text', min: 200, ellipsis: true, group: 'Input/Output' },
+  { field: 'business_rules', label: 'Business Rules', type: 'text', min: 220, ellipsis: true, group: 'Logic & Rules' },
+  { field: 'exceptions', label: 'Exceptions', type: 'text', min: 200, ellipsis: true, group: 'Logic & Rules' },
+  { field: 'controls_approvals', label: 'Controls / Approvals', type: 'text', min: 200, ellipsis: true, group: 'Logic & Rules' },
+  { field: 'integrations', label: 'Integrations', type: 'text', min: 190, ellipsis: true, group: 'ERPNext Setup' },
+  { field: 'kpis', label: 'KPIs', type: 'text', min: 180, ellipsis: true, group: 'Logic & Rules' },
 ]
+
+// Group COLUMNS into the StepInspector's tab order (UI-REVAMP D4). Field order
+// within a group follows COLUMNS' own (original, paste-positional) order — do
+// not reorder COLUMNS itself for grouping; PASTE_FIELDS depends on its layout.
+// Pure so the tab list and its unit test don't depend on Vue. Every field
+// belongs to exactly one of GROUPS; result is [{ group, fields }, ...] in
+// GROUPS order.
+export function columnsByGroup(columns = COLUMNS) {
+  return GROUPS.map((group) => ({
+    group,
+    fields: columns.filter((column) => column.group === group),
+  }))
+}
 
 // Fixed-width utility lanes (flex-shrink:0 slots, per ui-design density rhythm):
 // the leading order/index column and the trailing action columns.

@@ -64,14 +64,52 @@ bar's `#topbar-status-slot` (a parent component can't `inject()` a descendant's
 (`MapTabs.vue` exposes `{ getSvg, activeTab }` via `defineExpose` for exactly
 this) — the SVG only exists in the DOM while that tab is active.
 
-**Inspector mount slot for U3:** `components/editor/MapSettingsInspector.vue` is
-the right-column inspector. For U2 it only holds map-level settings (Direction /
-Status / Version / Type badge) — the fields that used to sit on the removed
-"Open Editor" detail page. It ends with a clearly-labelled placeholder block
-(`Step inspector mounts here (U3)`) where U3's shared grouped step inspector
-(General / I-O / Logic / ERPNext) should mount, driven by the step selected in
-Table or the Diagram node click. Do not build that inspector by editing this
-file's placeholder — replace the placeholder block itself.
+**Inspector mount slot (map-level, U2):** `components/editor/MapSettingsInspector.vue`
+is the workspace shell's right-column inspector. It only holds map-level settings
+(Direction / Status / Version / Type badge) — the fields that used to sit on the
+removed "Open Editor" detail page. Its former "Step inspector mounts here (U3)"
+placeholder is deliberately **not** filled: U3 mounts the step inspector at the
+Wizard and Diagram tabs themselves (see below), not in this shared right column,
+so map-level settings and step-level editing stay visually and structurally
+separate. The placeholder comment now records that decision instead of pointing
+at unbuilt work.
+
+**The shared step inspector (UI step U3 — D4/D5):**
+`components/editor/StepInspector.vue` is the ONE grouped, tabbed editor for a
+Map Step's 15 attributes, mounted at exactly two places:
+- `WizardTab.vue` — inline in the current-step panel (replaces the old flat
+  `WizardStepPanel.vue`, which U3 deleted).
+- `DiagramNodePanel.vue` — docked in the right-side overlay opened by clicking a
+  diagram node (replaces that panel's old read-only field list; it is now
+  genuinely editable).
+
+Tabs: **General** (step_id, step_name, lane_role, node_type, workflow_state) ·
+**Input/Output** (trigger_input, output_result, key_data_fields) · **Logic &
+Rules** (business_rules, exceptions, controls_approvals, kpis) · **ERPNext
+Setup** (erpnext_module, erpnext_doctype, integrations) · **Connections**
+(`ConnectionsList.vue`, docked) · **Pain Points** (`PainPointEditor.vue`,
+As-Is maps only). The field→tab grouping is data, not template logic: each
+`columns.js` entry carries a `group` (one of `GROUPS`), and
+`columnsByGroup(COLUMNS)` (pure, unit-tested) turns that into the tab list —
+COLUMNS' own field order is unchanged (PASTE_FIELDS is positional) so Table and
+the inspector never disagree on layout, only on grouping.
+
+Every field tab renders the Table's own `GridCell` per field — the identical
+master-driven dropdowns and the identical `store.setField` write path Table
+uses, so a Map Step never has two field-editing implementations. Connections
+editing was extracted into `ConnectionsList.vue` (pure list + add/remove body,
+no Dialog) so there is one connection-editing pattern with two hosts:
+`ConnectionEditorDialog.vue` wraps it in a Dialog for the Table row's
+"+ connection" affordance, and `StepInspector`'s Connections tab mounts it
+docked. Pain Points reuses `PainPointEditor.vue` the same way Wizard always did
+(inline, no Dialog); `PainPointDialog.vue` remains the Table row's Dialog host
+of that same component. Because both `StepInspector` mounts read the step via
+the shared store (`store.findStep(uid)` / the `state.steps` element passed
+down as a prop) and write through the same store mutators
+(`setField`/`addConnection`/`addPainPoint`/…), editing a field from the
+Diagram node panel and reading it from the Wizard rail (or the Table grid) is
+the same reactive object — see `stores/useMapStore.test.js` for a store-level
+proof of this property.
 
 Pure breadcrumb/ancestry logic (no Vue, no network) lives in
 `src/workspace/treeContext.js` — `findMapContext`, `findProcessForSub`,
@@ -136,10 +174,12 @@ Table/Diagram/Wizard internals fill their own panels and are untouched by U2.
   factories, `toSavePayload`, `mergeUidMap`). Phase 3 adds `generateSwimlane.js`.
 - `src/components/editor/` — `MapWorkspace.vue`, `MapSettingsInspector.vue`
   (both added U2), `MapTabs.vue`, `TableTab.vue`, `StepRow.vue`, `GridCell.vue`,
-  `ConnectionEditorDialog.vue`, `PasteDialog.vue`, `columns.js` (Phase 2),
-  `DiagramTab.vue`, `DiagramNodePanel.vue` (Phase 3), `WizardTab.vue` (Phase 4),
-  `ExportMenu.vue` (Phase 3, S10) — rendered by `MapWorkspace.vue` via
-  `Teleport` into the top bar, not inline in `DiagramTab.vue` anymore.
+  `ConnectionEditorDialog.vue`, `ConnectionsList.vue` (U3 extraction), `PasteDialog.vue`,
+  `columns.js` (Phase 2), `DiagramTab.vue`, `DiagramNodePanel.vue` (Phase 3, content
+  replaced U3), `WizardTab.vue` (Phase 4), `StepInspector.vue` (U3 — the shared step
+  inspector, see above), `ExportMenu.vue` (Phase 3, S10) — rendered by
+  `MapWorkspace.vue` via `Teleport` into the top bar, not inline in `DiagramTab.vue`
+  anymore.
 - `src/data/erpnext.js` — cached `doctypes` resource for the ERPNext DocType picker
   (`flowlane.api.erpnext.get_doctypes`). Read options with `doctypeOptions()`.
 
