@@ -6,7 +6,21 @@ flowlane-design/PROCESS-CATALOG.md §2. One file per ERPNext module (§2.1-13);
 seeded Sub Process Template's default steps.
 """
 
-from flowlane.process_catalog import accounts, buying, hr, manufacturing, projects, selling, stock
+from flowlane.process_catalog import (
+	accounts,
+	assets,
+	buying,
+	crm,
+	education,
+	healthcare,
+	hr,
+	manufacturing,
+	projects,
+	quality,
+	selling,
+	stock,
+	support,
+)
 
 # module_name (matches Flowlane Process Template.module) -> {sub process title: steps}
 CATALOG = {
@@ -17,4 +31,10 @@ CATALOG = {
 	"HR": hr.STEPS,
 	"Manufacturing": manufacturing.STEPS,
 	"Projects": projects.STEPS,
+	"CRM": crm.STEPS,
+	"Support": support.STEPS,
+	"Quality": quality.STEPS,
+	"Assets": assets.STEPS,
+	"Healthcare": healthcare.STEPS,
+	"Education": education.STEPS,
 }

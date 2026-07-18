@@ -168,6 +168,8 @@ PAIN_POINT_TYPES = [
 # entry seeded above; left blank where a module's work doesn't map cleanly to
 # a single value stream rather than stretching a fit.
 _HORIZONTAL = "Horizontal (Core)"
+_SUPPORTING = "Supporting"
+_VERTICAL = "Vertical-Specific"
 
 PROCESS_TEMPLATES = [
 	{
@@ -219,6 +221,60 @@ PROCESS_TEMPLATES = [
 		"value_stream": None, "category": _HORIZONTAL,
 		"sub_processes": [
 			"Project Setup", "Task Assignment", "Timesheet Capture", "Billing",
+		],
+	},
+	# --- new processes (PROCESS-CATALOG.md §2.8-13) -------------------------
+	{
+		# Overlaps heavily with Selling's own pipeline value stream — left
+		# blank per the approved recommendation rather than adding a
+		# redundant "Lead-to-Loyalty" stream.
+		"module": "CRM", "process_name": "Customer Engagement & Retention",
+		"value_stream": None, "category": _HORIZONTAL,
+		"sub_processes": [
+			"Campaign Management", "Contact & Account Management",
+			"Customer Communication", "Renewal & Retention",
+		],
+	},
+	{
+		"module": "Support", "process_name": "Issue-to-Resolution",
+		"value_stream": "Issue-to-Resolution", "category": _HORIZONTAL,
+		"sub_processes": [
+			"Ticket Logging", "Triage & Assignment",
+			"Resolution & Escalation", "Customer Feedback & Closure",
+		],
+	},
+	{
+		# Cross-cutting like Stock — spans Buying, Manufacturing and Selling
+		# rather than belonging to one value stream.
+		"module": "Quality", "process_name": "Quality Management",
+		"value_stream": None, "category": _SUPPORTING,
+		"sub_processes": [
+			"Incoming Inspection", "In-Process Quality Check",
+			"Non-Conformance & CAPA", "Outgoing/Final Inspection",
+		],
+	},
+	{
+		"module": "Assets", "process_name": "Asset Lifecycle Management",
+		"value_stream": None, "category": _SUPPORTING,
+		"sub_processes": [
+			"Asset Acquisition & Capitalization", "Asset Maintenance & Repair",
+			"Asset Transfer/Movement", "Asset Disposal/Retirement",
+		],
+	},
+	{
+		"module": "Healthcare", "process_name": "Patient-to-Billing",
+		"value_stream": "Patient-to-Billing", "category": _VERTICAL,
+		"sub_processes": [
+			"Patient Registration", "Encounter & Diagnosis",
+			"Lab/Radiology Orders", "Billing & Insurance Claims",
+		],
+	},
+	{
+		"module": "Education", "process_name": "Admission-to-Alumni",
+		"value_stream": "Admission-to-Alumni", "category": _VERTICAL,
+		"sub_processes": [
+			"Admission & Enrollment", "Course/Program Scheduling",
+			"Fee Collection", "Student Assessment & Grading",
 		],
 	},
 ]
