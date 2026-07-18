@@ -73,7 +73,21 @@ onMounted(() => store.load())
     />
   </div>
 
-  <Teleport to="#topbar-status-slot">
+  <!-- `defer` (Vue 3.5) is load-bearing, not decorative: #topbar-status-slot
+       is rendered by WorkspaceTopBar, a SIBLING mounted earlier in the same
+       parent (ClientWorkspace.vue) — the exact "target rendered by another
+       component in the same tick" case Vue's docs call out. Without `defer`,
+       Teleport resolves its target synchronously the instant this vnode is
+       processed; on this route (an async-loaded page component) that runs
+       before the sibling's DOM node exists, so resolveTarget returns null.
+       Production builds strip the dev-only "Invalid Teleport target" warning,
+       so this failed completely silently — Export was unreachable with zero
+       console signal. `defer` queues target resolution for after the whole
+       tree's initial mount finishes, guaranteeing #topbar-status-slot exists
+       first. Verified live via Playwright: without `defer`,
+       `#topbar-status-slot` had 0 children on every load; with it, Saved
+       text + Export mount every time, and Export produces real files. -->
+  <Teleport defer to="#topbar-status-slot">
     <span class="text-xs text-ink-gray-5">{{ saveLabel }}</span>
     <ExportMenu
       :get-svg="getSvg"

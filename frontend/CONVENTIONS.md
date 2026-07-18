@@ -64,6 +64,25 @@ bar's `#topbar-status-slot` (a parent component can't `inject()` a descendant's
 (`MapTabs.vue` exposes `{ getSvg, activeTab }` via `defineExpose` for exactly
 this) — the SVG only exists in the DOM while that tab is active.
 
+**Teleport into `#topbar-status-slot` MUST use `defer` (Vue 3.5+, U6 fix).**
+`MapWorkspace.vue`'s `<Teleport defer to="#topbar-status-slot">` — the
+`defer` prop is required, not optional styling. `#topbar-status-slot` is
+rendered by `WorkspaceTopBar`, a sibling mounted earlier in the same parent
+(`ClientWorkspace.vue`) — Vue's own docs flag this exact "target rendered by
+another component in the same tick" case. Without `defer`, Teleport resolves
+its target synchronously the instant its vnode is processed; on this route
+(an async-loaded page component) that can run before the sibling's DOM node
+exists, so `resolveTarget` silently returns null — production builds strip
+the dev-only "Invalid Teleport target" warning, so this fails with **zero**
+console signal, not even an error. This is exactly what happened between U2
+(where it worked) and U6 (found completely broken, Export unreachable in the
+running app) — nothing needs to visibly "break" the pattern for it to
+regress here, since success depends on mount-order timing Vue does not
+guarantee for cross-component Teleport targets without `defer`. Any FUTURE
+Teleport into a target rendered by a sibling (not an ancestor-independent DOM
+node) needs `defer` too — verify with a real browser (element/child-count
+check), not just "the code looks the same as before."
+
 **Inspector mount slot (map-level + selected step):**
 `components/editor/MapSettingsInspector.vue` is the workspace shell's ONE
 right-column inspector — exactly the "Inspector (context) — selected step /
