@@ -26,6 +26,15 @@ const inspectorCollapsed = ref(false)
 // U2 default) is a flex sibling that shares width with MapTabs; Overlay lets
 // MapTabs use the FULL pane width and floats the inspector on top instead —
 // a real canvas-room tradeoff, not a cosmetic change.
+//
+// Overlay's z-40 (U6 fix, was z-20): TableTab's sticky header row/columns go
+// up to z-30 (thead z-20, sticky <th> cells z-30, so they stay above the
+// table's own scrolled body while scrolling) — with the inspector at z-20 it
+// tied or LOST against those, so the sticky header (e.g. "Output / Result")
+// visibly painted over the "floating on top" inspector instead of being
+// covered by it, an unreadable overlap confirmed live via screenshot. z-40
+// clears the Table's whole z-index budget; TweakPanel (z-50, `fixed`, a
+// different context) still wins over everything, as intended.
 const overlayInspector = computed(() => uiPrefs.inspectorMode === 'overlay')
 
 const hasSteps = computed(() => store.state.steps.length > 0)
@@ -68,7 +77,7 @@ onMounted(() => store.load())
       v-model:collapsed="inspectorCollapsed"
       :store="store"
       :selected-step="diagramSelectedStep"
-      :class="overlayInspector ? 'absolute inset-y-0 right-0 z-20 shadow-lg' : ''"
+      :class="overlayInspector ? 'absolute inset-y-0 right-0 z-40 shadow-lg' : ''"
       @clear-selected-step="clearDiagramSelection"
     />
   </div>

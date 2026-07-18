@@ -14,6 +14,22 @@ the contract that lets Phases 2–5 build in parallel without colliding. Also re
 2. **This is a custom SPA, not Desk.** Never embed Frappe Desk form/list views.
 3. **Follow code-style:** small functions, files under ~300 lines, OO-ish modules,
    reuse before abstracting, terse "why" comments, unit tests for pure logic.
+4. **`bg-surface-white` needed a manual fix (U6).** frappe-ui's `tailwind/colors.js`
+   defines `--surface-white` and a `white` theme color, but Tailwind's build never
+   actually emitted a `.bg-surface-white{}` rule for it — confirmed by grepping the
+   built CSS bundle (sibling tokens like `.bg-surface-gray-2{}` ARE present;
+   `.bg-surface-white{}` was absent entirely). Every use of the class across this
+   app (sticky Table columns, the Inspector panel, tree rows, dialogs, …) silently
+   had NO background at all — invisible in most layouts since nothing was usually
+   stacked behind them, until U6's Inspector "Overlay" mode floated the panel over
+   the Table and made the transparency plainly visible (unreadable overlapping
+   text), which also explained a faint scroll-ghosting artifact on sticky Table
+   columns. Fixed by defining `.bg-surface-white { background-color: #ffffff; }`
+   directly in `src/index.css` (this app has no root-level dark mode, only scoped
+   `:deep()` overrides per component, so a flat white is correct) — do not revert
+   this rule, and do not "clean it up" as a duplicate/redundant-looking override;
+   it is the ONLY thing making the class work. If frappe-ui ever ships a fix
+   upstream, this local rule is harmless (identical value) and can be removed then.
 4. **Additive integration.** A feature agent creates ONLY new files in its assigned
    folder. It must NOT edit `router.js`, `App.vue`, `pages/MapEditor.vue`, or the
    shared `data/*` modules. Instead it returns integration notes: which component to

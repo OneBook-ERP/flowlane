@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* `bg-surface-white` is defined as a CSS variable + theme color in frappe-ui's
+   tailwind/colors.js (a real, intended token — CONVENTIONS.md's own example of
+   a valid frappe-ui class) but Tailwind's build never actually emits a
+   `.bg-surface-white` rule for it (confirmed: grepping the built CSS bundle
+   for `.bg-surface-white{` finds nothing, while sibling tokens like
+   `.bg-surface-gray-2{` are present) — a pre-existing upstream gap, not
+   something this UI revamp introduced. Every element using the class (sticky
+   Table columns, the Inspector panel, tree rows, dialogs, …) has silently had
+   NO background rule at all, invisible in most layouts since nothing was ever
+   genuinely stacked behind them — found here because UI step U6's Inspector
+   "Overlay" mode floats the inspector ON TOP of the Table, which finally made
+   the transparency plainly visible (unreadable overlapping text) and also
+   explained a faint scroll-ghosting artifact on the Table's sticky columns.
+   Defining the rule directly (matching frappe-ui's OTHER surface tokens'
+   flat-white intent; this app has no root-level dark mode, only scoped
+   component overrides) is a minimal, safe, in-scope fix — patching the
+   vendored frappe-ui package itself is out of scope. */
+.bg-surface-white {
+  background-color: #ffffff;
+}
