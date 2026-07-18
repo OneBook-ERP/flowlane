@@ -9,6 +9,8 @@ import { computed } from 'vue'
 import { Button, FormControl, Combobox, FeatherIcon } from 'frappe-ui'
 import { masterOptions } from '@/data/masters.js'
 import { useMapStore } from '@/stores/useMapStore.js'
+import { severityChip } from '@/ui/chipColors.js'
+import StatusChip from '@/components/StatusChip.vue'
 
 const props = defineProps({
   step: { type: Object, required: true },
@@ -52,14 +54,21 @@ const points = computed(() => props.step.pain_points || [])
           @update:modelValue="store.setPainPoint(step.uid, index, { pain_type: $event })"
         />
       </div>
-      <FormControl
-        class="w-full sm:w-32"
-        type="select"
-        label="Severity"
-        :options="SEVERITIES"
-        :modelValue="point.severity"
-        @update:modelValue="store.setPainPoint(step.uid, index, { severity: $event })"
-      />
+      <div class="flex w-full flex-col gap-1 sm:w-32">
+        <FormControl
+          type="select"
+          label="Severity"
+          :options="SEVERITIES"
+          :modelValue="point.severity"
+          @update:modelValue="store.setPainPoint(step.uid, index, { severity: $event })"
+        />
+        <StatusChip
+          v-if="point.severity"
+          class="w-fit"
+          :label="point.severity"
+          :classes="severityChip(point.severity).classes"
+        />
+      </div>
       <Button
         variant="ghost"
         label="Remove pain point"

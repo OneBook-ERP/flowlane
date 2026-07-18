@@ -15,6 +15,8 @@ import { ref, reactive, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button, FeatherIcon, toast } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
+import StatusChip from '@/components/StatusChip.vue'
+import { statusChip } from '@/ui/chipColors.js'
 import {
   loadClientTree,
   deleteProcess,
@@ -250,7 +252,7 @@ async function moveSub({ process, sub, direction }) {
             <span class="shrink-0 text-xs text-ink-gray-5">
               {{ selected.node.maps.length }} {{ selected.node.maps.length === 1 ? 'map' : 'maps' }}
             </span>
-            <Button variant="subtle" size="sm" @click="newMap(selected.node)">
+            <Button variant="solid" size="sm" @click="newMap(selected.node)">
               <template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
               Add Map
             </Button>
@@ -269,7 +271,9 @@ async function moveSub({ process, sub, direction }) {
                 <FeatherIcon name="git-branch" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
                 <span class="min-w-0 flex-1 truncate text-ink-gray-8">{{ map.map_title }}</span>
                 <MapBadge :map-type="map.map_type" />
-                <span class="w-24 shrink-0 text-right text-xs text-ink-gray-5">{{ map.status }}</span>
+                <span class="w-24 shrink-0 text-right">
+                  <StatusChip :label="map.status" :classes="statusChip(map.status).classes" />
+                </span>
               </button>
             </div>
           </div>
@@ -284,10 +288,8 @@ async function moveSub({ process, sub, direction }) {
             <span class="text-xs text-ink-gray-5">
               <span class="text-ink-gray-4">Category</span> {{ selected.node.category || '—' }}
             </span>
-            <span class="rounded bg-surface-gray-3 px-1.5 py-0.5 text-xs font-medium text-ink-gray-7">
-              {{ selected.node.status }}
-            </span>
-            <Button class="ml-auto" variant="subtle" size="sm" @click="newSub(selected.node)">
+            <StatusChip :label="selected.node.status" :classes="statusChip(selected.node.status).classes" />
+            <Button class="ml-auto" variant="solid" size="sm" @click="newSub(selected.node)">
               <template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
               Add Sub Process
             </Button>

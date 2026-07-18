@@ -9,6 +9,8 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
+import StatusChip from '@/components/StatusChip.vue'
+import { statusChip } from '@/ui/chipColors.js'
 import { crumbLabel } from '@/workspace/treeContext.js'
 
 const props = defineProps({
@@ -51,6 +53,11 @@ const mapCrumb = computed(() => props.crumbs.find((c) => c.level === 'map'))
     </template>
 
     <MapBadge v-if="mapCrumb" :map-type="mapCrumb.node.map_type" />
+    <StatusChip
+      v-if="mapCrumb"
+      :label="mapCrumb.node.status"
+      :classes="statusChip(mapCrumb.node.status).classes"
+    />
 
     <div id="topbar-status-slot" class="ml-auto flex shrink-0 items-center gap-3"></div>
   </header>

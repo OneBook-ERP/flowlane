@@ -6,6 +6,8 @@
 import { ref, watch, computed } from 'vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
+import StatusChip from '@/components/StatusChip.vue'
+import { statusChip } from '@/ui/chipColors.js'
 import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
@@ -163,6 +165,7 @@ const rowClass = (name) =>
                 {{ map.map_title }}
               </button>
               <MapBadge :map-type="map.map_type" />
+              <StatusChip :label="map.status" :classes="statusChip(map.status).classes" />
               <Dropdown :options="mapMenu(map)" placement="right">
                 <button class="rounded p-0.5 text-ink-gray-5 hover:bg-surface-gray-3">
                   <FeatherIcon name="more-horizontal" class="h-4 w-4" />
