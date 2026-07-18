@@ -3,13 +3,16 @@
 // Sub Process (L2) -> Process Map (L3). Rows expand/collapse; each row has a ⋯
 // menu (add child / edit / delete / move) and emits intent events. The parent
 // page owns the dialogs and mutations — this component is presentation only.
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Dropdown, FeatherIcon } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
 
 const props = defineProps({
   processes: { type: Array, default: () => [] },
   selectedName: { type: String, default: '' },
+  // Names to force-open in addition to whatever the user has toggled — the
+  // workspace shell uses this to reveal a deep-linked map's ancestors (U2/B2).
+  autoExpand: { type: Array, default: () => [] },
 })
 const emit = defineEmits([
   'select',
@@ -26,6 +29,18 @@ const emit = defineEmits([
 ])
 
 const expanded = ref(new Set())
+
+watch(
+  () => props.autoExpand,
+  (names) => {
+    if (!names?.length) return
+    const next = new Set(expanded.value)
+    names.forEach((name) => next.add(name))
+    expanded.value = next
+  },
+  { immediate: true }
+)
+
 function toggle(name) {
   const next = new Set(expanded.value)
   next.has(name) ? next.delete(name) : next.add(name)

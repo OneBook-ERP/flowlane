@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Flowlane SPA routes (base /flowlane). Phase 1 ships Home + ClientWorkspace;
-// the map Editor is a Phase-1 STUB — the Wizard/Table/Diagram tabs land in
-// Phases 2-4 but the route + name are fixed now so navigation targets are stable.
+// Flowlane SPA routes (base /flowlane). Route paths/names are FIXED (see
+// CONVENTIONS.md) — UI step U2 changed what they render, not the contract:
+// `ClientWorkspace` is now the full unified workspace shell (tree rail +
+// breadcrumb top bar + inline map editor via `?map=`), and `Editor` is a
+// deep-link resolver that redirects a bare `/m/:map` into that shell.
 const routes = [
   {
     path: '/',

@@ -18,7 +18,6 @@ import { generateSwimlane } from '@/diagram/generateSwimlane.js'
 import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
 import DiagramNodePanel from './DiagramNodePanel.vue'
-import ExportMenu from './ExportMenu.vue'
 
 const store = useMapStore()
 const svgRef = ref(null)
@@ -49,6 +48,10 @@ const painCounts = computed(() => {
 })
 
 const getSvg = () => svgRef.value
+
+// The top bar's relocated Export control reads the live SVG through this
+// (UI step U2/B4) — see MapTabs.vue's defineExpose bridge.
+defineExpose({ getSvg })
 
 // Store rows -> engine input (uid form, shape resolved from the node-type map).
 const engineSteps = computed(() => {
@@ -234,19 +237,9 @@ function labelStrip(lane) {
           Auto-arrange
         </Button>
       </Tooltip>
-      <p class="text-xs text-ink-gray-5">
+      <p class="ml-auto text-xs text-ink-gray-5">
         Click a node for details · drag to reposition
       </p>
-      <div class="ml-auto flex items-center gap-3">
-        <ExportMenu
-          :get-svg="getSvg"
-          :title="store.state.header.map_title || 'flowlane-map'"
-          :disabled="!hasSteps"
-        />
-        <span class="text-xs text-ink-gray-5">
-          {{ store.state.saving ? 'Saving…' : store.state.dirty ? 'Unsaved changes' : 'All changes saved' }}
-        </span>
-      </div>
     </div>
 
     <!-- canvas (scrolls) with a fixed detail overlay on the right -->

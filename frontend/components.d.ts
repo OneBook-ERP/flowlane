@@ -20,7 +20,9 @@ declare module 'vue' {
     GridCell: typeof import('./src/components/editor/GridCell.vue')['default']
     HierarchyTree: typeof import('./src/components/HierarchyTree.vue')['default']
     MapBadge: typeof import('./src/components/MapBadge.vue')['default']
+    MapSettingsInspector: typeof import('./src/components/editor/MapSettingsInspector.vue')['default']
     MapTabs: typeof import('./src/components/editor/MapTabs.vue')['default']
+    MapWorkspace: typeof import('./src/components/editor/MapWorkspace.vue')['default']
     NewClientDialog: typeof import('./src/components/NewClientDialog.vue')['default']
     NewMapDialog: typeof import('./src/components/NewMapDialog.vue')['default']
     PainPointDialog: typeof import('./src/components/editor/PainPointDialog.vue')['default']
@@ -33,7 +35,9 @@ declare module 'vue' {
     StepRow: typeof import('./src/components/editor/StepRow.vue')['default']
     SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']
     TableTab: typeof import('./src/components/editor/TableTab.vue')['default']
+    TreeRail: typeof import('./src/components/workspace/TreeRail.vue')['default']
     WizardStepPanel: typeof import('./src/components/editor/WizardStepPanel.vue')['default']
     WizardTab: typeof import('./src/components/editor/WizardTab.vue')['default']
+    WorkspaceTopBar: typeof import('./src/components/workspace/WorkspaceTopBar.vue')['default']
   }
 }

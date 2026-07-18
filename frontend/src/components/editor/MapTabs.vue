@@ -1,7 +1,7 @@
 <script setup>
 // Map editor tab bar (S6). Phase 2 delivers the Table tab, Phase 3 the Diagram tab,
 // and Phase 4 the Wizard tab. All three are views over one shared store (created in
-// MapEditor) — edits in any tab flow to the others through it.
+// the workspace shell) — edits in any tab flow to the others through it.
 import { ref } from 'vue'
 import TableTab from './TableTab.vue'
 import DiagramTab from './DiagramTab.vue'
@@ -13,6 +13,15 @@ const tabs = [
   { key: 'wizard', label: 'Wizard' },
 ]
 const active = ref('table')
+const diagramRef = ref(null)
+
+// The top bar's Export control (UI step U2/B4) lives outside this tab tree, so
+// it reaches the live diagram SVG through this exposed accessor instead of a
+// prop — Export only works while the Diagram tab is actually mounted.
+defineExpose({
+  activeTab: active,
+  getSvg: () => diagramRef.value?.getSvg?.(),
+})
 </script>
 
 <template>
@@ -35,7 +44,7 @@ const active = ref('table')
 
     <div class="min-h-0 flex-1">
       <TableTab v-if="active === 'table'" />
-      <DiagramTab v-else-if="active === 'diagram'" />
+      <DiagramTab v-else-if="active === 'diagram'" ref="diagramRef" />
       <WizardTab v-else-if="active === 'wizard'" />
     </div>
   </div>

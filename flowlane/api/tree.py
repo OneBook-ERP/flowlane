@@ -4,7 +4,10 @@
 
 ``get_clients`` feeds the Client Home grid (S1); ``get_client_tree`` feeds the
 Client Workspace tree (S2) with the full L1 (Process) -> L2 (Sub Process) ->
-L3 (Process Map) nesting. Both are read-only; writes go through frappe.client.
+L3 (Process Map) nesting. ``get_map_location`` resolves a Process Map deep link
+(``/m/:map``) back to its client so the workspace shell (S2/S6, UI step U2) can
+load the right tree and populate the breadcrumb. All read-only; writes go
+through frappe.client.
 """
 
 import frappe
@@ -78,3 +81,18 @@ def _maps(sub_process: str) -> list[dict]:
 		fields=["name", "map_title", "map_type", "direction", "status", "version_label"],
 		order_by="map_type asc, version_label asc",
 	)
+
+
+@frappe.whitelist()
+def get_map_location(map: str) -> dict:
+	"""Resolve a Process Map to its client/process/sub-process ancestry.
+
+	Feeds the ``/m/:map`` deep-link resolver (S6): given only a map name, find
+	which client's workspace to open so the tree + breadcrumb can populate.
+	"""
+	sub_process = frappe.db.get_value("Flowlane Process Map", map, "sub_process")
+	if not sub_process:
+		frappe.throw(frappe._("Process Map {0} not found.").format(map))
+	parent_process = frappe.db.get_value("Flowlane Sub Process", sub_process, "parent_process")
+	client = frappe.db.get_value("Flowlane Process", parent_process, "client")
+	return {"client": client, "process": parent_process, "sub_process": sub_process}

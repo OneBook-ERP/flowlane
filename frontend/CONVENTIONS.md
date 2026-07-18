@@ -35,10 +35,48 @@ the contract that lets Phases 2–5 build in parallel without colliding. Also re
 | name | path | page | purpose |
 |---|---|---|---|
 | `Home` | `/` | `pages/HomePage.vue` | Client folder grid (S1) |
-| `ClientWorkspace` | `/c/:client` | `pages/ClientWorkspace.vue` | Tree + detail (S2) |
-| `Editor` | `/m/:map` | `pages/MapEditor.vue` | Map editor (S6) — Phase-1 STUB |
+| `ClientWorkspace` | `/c/:client` | `pages/ClientWorkspace.vue` | **The unified workspace shell** (S2/S6) — top bar, tree rail, and (when `?map=` is set) the inline map editor, all in one page |
+| `Editor` | `/m/:map` | `pages/MapEditor.vue` | Deep-link **resolver**, not a page UI — resolves the map's client via `get_map_location` and `router.replace`s into `ClientWorkspace` with `?map=` set |
 
 `:client` is the Flowlane Client name; `:map` is the Flowlane Process Map name.
+
+### The workspace shell (UI step U2 — B2/B3/B4)
+There is no more standalone editor page. `ClientWorkspace.vue` always renders:
+`WorkspaceTopBar` (breadcrumb `Client / Process / Sub-process / Map` + As-Is/To-Be
+badge + a `#topbar-status-slot` div) → a row of `TreeRail` (collapsible L1→L2→L3,
+wraps `HierarchyTree` unchanged) + center pane + (when a map is open) the right
+inspector. The active map lives in **this route's own `?map=` query param**, not
+a separate route — clicking a map in the tree calls `router.push` with the query
+set (no page navigation, tree/scroll state survives); selecting a process/sub
+clears it. `/m/:map` is kept as a bookmarkable/shareable entry point that
+redirects in.
+
+When `?map=` is set, `ClientWorkspace` mounts `components/editor/MapWorkspace.vue`
+**keyed by the map name** (`:key="activeMap"`) inside a `#editor-tabs` container —
+keying forces a clean remount (fresh store, fresh tab state) when the user jumps
+between maps without leaving the shell. `MapWorkspace.vue` is what `MapEditor.vue`
+used to be: it calls `provideMapStore(map)` and `store.load()`, and renders
+`MapTabs` — but now it also renders `MapSettingsInspector` (the right column) as
+a sibling, and `Teleport`s its Saved/Saving text + `ExportMenu` into the top
+bar's `#topbar-status-slot` (a parent component can't `inject()` a descendant's
+`provide()`d store, so the top bar reaches live map state this way instead).
+`ExportMenu`'s `getSvg` is disabled unless the Diagram tab is actually mounted
+(`MapTabs.vue` exposes `{ getSvg, activeTab }` via `defineExpose` for exactly
+this) — the SVG only exists in the DOM while that tab is active.
+
+**Inspector mount slot for U3:** `components/editor/MapSettingsInspector.vue` is
+the right-column inspector. For U2 it only holds map-level settings (Direction /
+Status / Version / Type badge) — the fields that used to sit on the removed
+"Open Editor" detail page. It ends with a clearly-labelled placeholder block
+(`Step inspector mounts here (U3)`) where U3's shared grouped step inspector
+(General / I-O / Logic / ERPNext) should mount, driven by the step selected in
+Table or the Diagram node click. Do not build that inspector by editing this
+file's placeholder — replace the placeholder block itself.
+
+Pure breadcrumb/ancestry logic (no Vue, no network) lives in
+`src/workspace/treeContext.js` — `findMapContext`, `findProcessForSub`,
+`breadcrumbTrail`, `crumbLabel` — unit-tested in the sibling `.test.js`. Reuse
+these rather than re-deriving ancestry from the tree elsewhere.
 
 ## Data layer (`src/data/` — reuse these; do NOT re-fetch elsewhere)
 All reads use frappe-ui resources; all writes go through frappe-ui `call('frappe.client.*')`
@@ -54,6 +92,8 @@ so server-condition guard messages surface verbatim.
 - `tree.js` — `loadClientTree(client)` returns a per-client tree resource (nested
   L1→L2→L3 from `flowlane.api.tree.get_client_tree`) + create/update/delete helpers
   for Process, Sub Process, Map. Call `.reload()` after any mutation.
+  `getMapLocation(map)` (added U2) resolves a map to its `{client, process,
+  sub_process}` for the `/m/:map` deep-link resolver.
 - `reorder.js` — pure helpers `moveItem(items, from, to)` + `resequence(ordered)` for
   sub-process ordering. Unit-tested (`reorder.test.js`). No Vue, no network.
 - `errors.js` — `serverMessage(error)` extracts the first frappe.throw message from a
@@ -70,24 +110,36 @@ so server-condition guard messages surface verbatim.
 ## Components (`src/components/`)
 Shared, presentation-only where possible; pages own state + mutations.
 - `HierarchyTree.vue` — L1→L2→L3 tree; emits intent events (`select`, `open-map`,
-  `new-sub`, `edit-process`, `move-sub`, …). No mutations inside.
+  `new-sub`, `edit-process`, `move-sub`, …). No mutations inside. Takes an
+  `autoExpand: string[]` prop (added U2) to force-open ancestors — used to
+  reveal a deep-linked map's process/sub without the user manually expanding.
 - `ClientTile.vue`, `MapBadge.vue` (As-Is amber / To-Be green), `RenameDialog.vue`,
   `ConfirmDeleteDialog.vue`.
 - Dialogs `NewClientDialog.vue`, `ProcessDialog.vue`, `SubProcessDialog.vue`,
   `NewMapDialog.vue` — each `v-model`-driven, emits `saved`, and self-toasts.
+- `src/components/workspace/` (added U2) — shell chrome for `ClientWorkspace.vue`:
+  `WorkspaceTopBar.vue` (breadcrumb + badge + `#topbar-status-slot`) and
+  `TreeRail.vue` (collapsible wrapper around `HierarchyTree`, forwards all its
+  events straight through via `v-on="$attrs"` since the page still owns every
+  mutation handler).
 
-## Map editor mount point (Phases 2–4)
-`pages/MapEditor.vue` mounts the **Wizard / Table / Diagram** tabs (`MapTabs.vue`)
-inside its `#editor-tabs` container. Phase 2 wired this: `MapEditor.vue` creates the
-store with `provideMapStore(map)`, calls `store.load()` on mount, and renders
-`MapTabs`. Later phases only fill the Wizard / Diagram panels — do not re-wire this.
+## Map editor mount point
+`components/editor/MapWorkspace.vue` mounts the **Table / Diagram / Wizard**
+tabs (`MapTabs.vue`) inline inside the workspace shell's `#editor-tabs`
+container (moved there from the old standalone `MapEditor.vue` page in UI step
+U2 — see "The workspace shell" above). It creates the store with
+`provideMapStore(map)`, calls `store.load()` on mount, and renders `MapTabs`
+plus `MapSettingsInspector` as siblings. Do not re-wire this store lifecycle;
+Table/Diagram/Wizard internals fill their own panels and are untouched by U2.
 - `src/map/` — pure, browser-free domain logic + vitest, mirroring `data/reorder.js`.
   Phase 2 added `pasteParser.js` (Excel block → field maps) and `steps.js` (row
   factories, `toSavePayload`, `mergeUidMap`). Phase 3 adds `generateSwimlane.js`.
-- `src/components/editor/` — `MapTabs.vue`, `TableTab.vue`, `StepRow.vue`,
-  `GridCell.vue`, `ConnectionEditorDialog.vue`, `PasteDialog.vue`, `columns.js`
-  (Phase 2). Wizard/Diagram tabs are labelled placeholders in `MapTabs.vue` for
-  Phases 3–4 to fill.
+- `src/components/editor/` — `MapWorkspace.vue`, `MapSettingsInspector.vue`
+  (both added U2), `MapTabs.vue`, `TableTab.vue`, `StepRow.vue`, `GridCell.vue`,
+  `ConnectionEditorDialog.vue`, `PasteDialog.vue`, `columns.js` (Phase 2),
+  `DiagramTab.vue`, `DiagramNodePanel.vue` (Phase 3), `WizardTab.vue` (Phase 4),
+  `ExportMenu.vue` (Phase 3, S10) — rendered by `MapWorkspace.vue` via
+  `Teleport` into the top bar, not inline in `DiagramTab.vue` anymore.
 - `src/data/erpnext.js` — cached `doctypes` resource for the ERPNext DocType picker
   (`flowlane.api.erpnext.get_doctypes`). Read options with `doctypeOptions()`.
 
@@ -136,4 +188,6 @@ with `useMapStore()` (provide/inject via an internal Symbol).
 ## Backend (`flowlane/api/`)
 Whitelisted methods, `@frappe.whitelist()`. Phase 1 added `tree.py` (`get_clients`,
 `get_client_tree`) and `masters.py` (`get_masters`); `map.py` has `validate_graph`.
+UI step U2 added `tree.py`'s `get_map_location(map)` — resolves a map to its
+`{client, process, sub_process}` ancestry for the `/m/:map` deep-link resolver.
 Permissions: roles Flowlane Consultant / Flowlane Manager / System Manager (Phase 0).

@@ -1,6 +1,7 @@
 // The single Map Step editor store: rows + connections + pain points for one
-// Process Map. Created once in MapEditor.vue via `provideMapStore(map)` and shared
-// with the Table (and future Wizard / Diagram) tabs via inject (`useMapStore()`).
+// Process Map. Created once in MapWorkspace.vue (the workspace shell's inline
+// map pane, UI step U2) via `provideMapStore(map)` and shared with the Table,
+// Diagram and Wizard tabs via inject (`useMapStore()`).
 // Reads through flowlane.api.map.get_map; writes through save_steps with a
 // debounced autosave. Pure row/payload logic lives in map/steps.js (unit-tested).
 
