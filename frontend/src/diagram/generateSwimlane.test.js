@@ -137,6 +137,41 @@ describe('generateSwimlane — TC3.4 cycles terminate', () => {
   })
 })
 
+describe('generateSwimlane — no-overlap placement', () => {
+  it('fans unconnected same-lane nodes across columns instead of stacking', () => {
+    const steps = ['S1', 'S2', 'S3'].map((id) => step(id, { lane_role: 'Ops' }))
+    const g = generateSwimlane(steps, 'LR')
+    const cols = g.nodes.map((n) => n.col).sort()
+    expect(cols).toEqual([0, 1, 2]) // distinct columns, no shared cell
+    const xs = new Set(g.nodes.map((n) => n.x))
+    expect(xs.size).toBe(3) // no two nodes share a position
+  })
+
+  it('never lets two same-lane nodes share a (col, lane) cell', () => {
+    const steps = [
+      step('S1', { lane_role: 'Sales', connections: [edge('D1')] }),
+      step('D1', { lane_role: 'Sales', node_type: 'Decision', connections: [edge('Y', 'Yes'), edge('N', 'No')] }),
+      step('Y', { lane_role: 'Sales' }),
+      step('N', { lane_role: 'Sales' }),
+    ]
+    const g = generateSwimlane(steps, 'LR')
+    const cells = g.nodes.map((n) => `${n.laneIndex}:${n.col}`)
+    expect(new Set(cells).size).toBe(cells.length)
+  })
+
+  it('keeps cross-lane nodes free to align on the same column', () => {
+    const steps = [
+      step('A', { lane_role: 'Sales', connections: [edge('B')] }),
+      step('B', { lane_role: 'Ops' }),
+    ]
+    const g = generateSwimlane(steps, 'LR')
+    const a = g.nodes.find((n) => n.step_id === 'A')
+    const b = g.nodes.find((n) => n.step_id === 'B')
+    expect(b.col).toBe(a.col + 1)
+    expect(a.laneIndex).not.toBe(b.laneIndex)
+  })
+})
+
 describe('generateSwimlane — direction + overrides', () => {
   const steps = [
     step('S1', { connections: [edge('S2')] }),

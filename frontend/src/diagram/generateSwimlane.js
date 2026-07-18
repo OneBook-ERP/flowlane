@@ -43,7 +43,8 @@ export function generateSwimlane(steps, direction = 'TB', options = {}) {
 
   const lanes = orderLanes(nodes, options.laneOrder || {})
   const laneIndex = new Map(lanes.map((lane) => [lane.role, lane.index]))
-  const columns = computeColumns(nodeIds, edges)
+  const ranks = computeColumns(nodeIds, edges)
+  const columns = spreadWithinLanes(nodes, ranks, laneIndex)
 
   const placed = placeNodes(nodes, columns, laneIndex, dir)
   const geometry = layoutBands(lanes, placed, columns, dir)
@@ -123,6 +124,34 @@ function computeColumns(nodeIds, edges) {
   const adjacency = buildAdjacency(nodeIds, edges)
   const backEdges = findBackEdges(nodeIds, adjacency)
   return longestPathRanks(nodeIds, adjacency, backEdges)
+}
+
+// Two nodes in the same lane must not share a column, or they render on top of
+// each other. Keep each node's rank as its preferred column; when a lane already
+// occupies that column, push the later node (by rank, then first-seen order) to
+// the next free one. With no edges every node ranks 0, so a lane's nodes fan out
+// 0,1,2,… along the flow axis in row order instead of stacking at the start.
+function spreadWithinLanes(nodes, ranks, laneIndex) {
+  const ordered = nodes
+    .map((node, seen) => ({
+      id: node.step_id,
+      lane: laneIndex.get(node.role) || 0,
+      col: ranks.get(node.step_id) || 0,
+      seen,
+    }))
+    .sort((a, b) => a.col - b.col || a.seen - b.seen)
+
+  const usedByLane = new Map()
+  const columns = new Map()
+  ordered.forEach((item) => {
+    const used = usedByLane.get(item.lane) || new Set()
+    let col = item.col
+    while (used.has(col)) col += 1
+    used.add(col)
+    usedByLane.set(item.lane, used)
+    columns.set(item.id, col)
+  })
+  return columns
 }
 
 function buildAdjacency(nodeIds, edges) {

@@ -14,6 +14,7 @@ declare module 'vue' {
     ClientTile: typeof import('./src/components/ClientTile.vue')['default']
     ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
     ConnectionEditorDialog: typeof import('./src/components/editor/ConnectionEditorDialog.vue')['default']
+    DiagramNodePanel: typeof import('./src/components/editor/DiagramNodePanel.vue')['default']
     DiagramTab: typeof import('./src/components/editor/DiagramTab.vue')['default']
     GridCell: typeof import('./src/components/editor/GridCell.vue')['default']
     HierarchyTree: typeof import('./src/components/HierarchyTree.vue')['default']

@@ -3,7 +3,8 @@
 // shared Map Step store, maps each row onto the pure engine's contract, and
 // renders the result as SVG — lane bands, node shapes by Node Type, directional
 // arrows and branch labels. The engine owns all geometry; this component only
-// draws it, plus the TB<->LR toggle, drag-to-override, and thumbnail-on-save.
+// draws it, plus the TB<->LR toggle, drag-to-override, auto-arrange (clear
+// overrides), click-a-node detail panel, and thumbnail-on-save.
 //
 // Engine identity: we pass each row's stable `uid` as the engine `step_id` (the
 // "uid form" the engine accepts) and translate connections' `to_uid` straight
@@ -16,12 +17,19 @@ import { diagramMeta, nodeShapeMap, laneOrderMap } from '@/data/diagramMeta.js'
 import { generateSwimlane } from '@/diagram/generateSwimlane.js'
 import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
+import DiagramNodePanel from './DiagramNodePanel.vue'
 
 const store = useMapStore()
 const svgRef = ref(null)
 const empty = { lanes: [], nodes: [], edges: [], width: 0, height: 0, direction: 'TB' }
 const diagram = ref(empty)
 const drag = ref(null) // { uid, x, y } live position while dragging
+const selectedUid = ref('') // node whose detail panel is open
+
+const selectedStep = computed(() => store.findStep(selectedUid.value) || null)
+const hasManual = computed(() =>
+  store.state.steps.some((s) => s.manual_x !== null || s.manual_y !== null)
+)
 
 const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
@@ -88,20 +96,25 @@ function toggleDirection() {
 
 // --- drag to override position (T3.7) -------------------------------------
 
+// One handler for both gestures: a press that barely moves is a click (open the
+// detail panel); a press that drags past the threshold repositions the node.
 function onPointerDown(event, node) {
   event.target.setPointerCapture?.(event.pointerId)
   const start = toSvgPoint(event)
   const origin = { x: node.x, y: node.y }
-  drag.value = { uid: node.step_id, x: node.x, y: node.y }
+  let moved = false
 
   const move = (e) => {
     const p = toSvgPoint(e)
+    if (!moved && Math.hypot(p.x - start.x, p.y - start.y) < 4) return
+    moved = true
     drag.value = { uid: node.step_id, x: origin.x + (p.x - start.x), y: origin.y + (p.y - start.y) }
   }
   const up = () => {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
-    if (drag.value) commitDrag(drag.value)
+    if (moved && drag.value) commitDrag(drag.value)
+    else selectedUid.value = node.step_id
     drag.value = null
   }
   window.addEventListener('pointermove', move)
@@ -113,6 +126,14 @@ function onPointerDown(event, node) {
 function commitDrag(pos) {
   store.setField(pos.uid, 'manual_x', Math.round(pos.x))
   store.setField(pos.uid, 'manual_y', Math.round(pos.y))
+}
+
+// Clear every manual override so the engine re-flows from scratch (F14).
+function autoArrange() {
+  store.state.steps.forEach((step) => {
+    if (step.manual_x !== null) store.setField(step.uid, 'manual_x', null)
+    if (step.manual_y !== null) store.setField(step.uid, 'manual_y', null)
+  })
 }
 
 function toSvgPoint(event) {
@@ -191,16 +212,21 @@ function labelStrip(lane) {
         </template>
         {{ direction === 'TB' ? 'Top-to-Bottom' : 'Left-to-Right' }}
       </Button>
+      <Button variant="subtle" :disabled="!hasManual" @click="autoArrange">
+        <template #prefix><FeatherIcon name="grid" class="h-4 w-4" /></template>
+        Auto-arrange
+      </Button>
       <p class="text-xs text-ink-gray-5">
-        Generated from the table · drag a node to reposition
+        Click a node for details · drag to reposition
       </p>
       <div class="ml-auto text-xs text-ink-gray-5">
         {{ store.state.saving ? 'Saving…' : store.state.dirty ? 'Unsaved changes' : 'All changes saved' }}
       </div>
     </div>
 
-    <!-- canvas -->
-    <div class="flex-1 overflow-auto bg-surface-gray-1 p-4">
+    <!-- canvas (scrolls) with a fixed detail overlay on the right -->
+    <div class="relative min-h-0 flex-1">
+      <div class="h-full overflow-auto bg-surface-gray-1 p-4">
       <p
         v-if="store.state.loading"
         class="px-4 py-10 text-center text-sm text-ink-gray-5"
@@ -336,6 +362,13 @@ function labelStrip(lane) {
           </text>
         </g>
       </svg>
+      </div>
+
+      <DiagramNodePanel
+        :step="selectedStep"
+        :steps="store.state.steps"
+        @close="selectedUid = ''"
+      />
     </div>
   </div>
 </template>
