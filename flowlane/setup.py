@@ -10,6 +10,8 @@ absent setup from after_install (fresh) + after_migrate (upgrades) covers both.
 
 import frappe
 
+from flowlane.process_catalog import CATALOG
+
 CONSULTANT = "Flowlane Consultant"
 MANAGER = "Flowlane Manager"
 
@@ -25,6 +27,7 @@ MASTER_DOCTYPES = (
 	# module-picker in New Client reads it via flowlane.api.templates, and
 	# only managers curate the templates themselves.
 	"Flowlane Process Template",
+	"Flowlane Map Step Template",
 )
 
 # Doctypes consultants fully own (create/edit/delete); managers get these too.
@@ -49,6 +52,7 @@ def ensure_setup(*args, **kwargs) -> None:
 	_ensure_permissions()
 	_seed_masters()
 	_seed_process_templates()
+	_seed_step_templates()
 	frappe.clear_cache()
 
 
@@ -245,3 +249,49 @@ def _insert_process_template(template: dict, sequence: int) -> None:
 			],
 		}
 	).insert(ignore_permissions=True)
+
+
+# --- seed step templates (create-if-absent) ---------------------------------
+# Populates each Sub Process Template's default steps from the Standard
+# Process Catalog (flowlane.process_catalog.CATALOG). Kept separate from
+# _seed_process_templates because that function skips a whole process the
+# moment it exists -- steps need their own idempotency check so re-running
+# setup after this catalog is extended still backfills steps onto
+# already-seeded (older) sub process templates.
+
+def _seed_step_templates() -> None:
+	for module, sub_processes in CATALOG.items():
+		process_template = frappe.db.get_value("Flowlane Process Template", {"module": module}, "name")
+		if not process_template:
+			continue
+		for title, steps in sub_processes.items():
+			_seed_steps_for_sub_process(process_template, title, steps)
+
+
+def _seed_steps_for_sub_process(process_template: str, title: str, steps: list) -> None:
+	sub_process_template = frappe.db.get_value(
+		"Flowlane Sub Process Template",
+		{"parenttype": "Flowlane Process Template", "parent": process_template, "title": title},
+		"name",
+	)
+	if not sub_process_template:
+		frappe.throw(
+			frappe._("Sub Process Template {0} not found under {1}.").format(title, process_template)
+		)
+	if frappe.db.exists("Flowlane Map Step Template", {"sub_process_template": sub_process_template}):
+		return
+	for sequence, (step_key, step_name, lane_role, node_type, connections) in enumerate(steps, start=1):
+		frappe.get_doc(
+			{
+				"doctype": "Flowlane Map Step Template",
+				"sub_process_template": sub_process_template,
+				"step_key": step_key,
+				"step_name": step_name,
+				"lane_role": lane_role,
+				"node_type": node_type,
+				"sequence": sequence,
+				"connections": [
+					{"to_step_key": to_key, "label": label} for to_key, label in connections
+				],
+			}
+		).insert(ignore_permissions=True)
