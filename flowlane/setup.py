@@ -126,11 +126,17 @@ LANE_ROLES = [
 	"Accounts Payable", "Procurement", "Production", "Quality",
 	"Management/Approver", "Customer", "Doctor", "Nurse", "Lab", "Front Desk",
 	"HR", "Finance", "IT/System",
+	# Added for the Standard Process Catalog (PROCESS-CATALOG.md §0): Projects,
+	# Support, Assets and Education needed lane roles nothing existing covered.
+	"Project Manager", "Team Member", "Support Agent", "Asset Custodian", "Student/Faculty",
 ]
 
 VALUE_STREAMS = [
 	"Quote-to-Cash", "Procure-to-Pay", "Plan-to-Produce", "Hire-to-Retire",
 	"Order-to-Fulfil", "Record-to-Report", "Patient-to-Billing", "Issue-to-Resolution",
+	# Added for the Standard Process Catalog (PROCESS-CATALOG.md §0): Education
+	# had no existing stream that fit.
+	"Admission-to-Alumni",
 ]
 
 PROCESS_CATEGORIES = ["Horizontal (Core)", "Vertical-Specific", "Supporting"]
