@@ -9,6 +9,7 @@ import { COLUMNS } from './columns.js'
 import StepRow from './StepRow.vue'
 import PasteDialog from './PasteDialog.vue'
 import ConnectionEditorDialog from './ConnectionEditorDialog.vue'
+import PainPointDialog from './PainPointDialog.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { doctypes } from '@/data/erpnext.js'
 
@@ -17,8 +18,10 @@ const columns = COLUMNS
 
 const pasteOpen = ref(false)
 const connection = ref({ open: false, uid: '' })
+const pain = ref({ open: false, uid: '' })
 
 const steps = computed(() => store.state.steps)
+const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
   if (store.state.dirty) return 'Unsaved changes'
@@ -31,6 +34,10 @@ onMounted(() => {
 
 function openConnections(uid) {
   connection.value = { open: true, uid }
+}
+
+function openPainPoints(uid) {
+  pain.value = { open: true, uid }
 }
 </script>
 
@@ -77,6 +84,7 @@ function openConnections(uid) {
               {{ column.label }}
             </th>
             <th class="px-2 py-2 font-medium">Connections</th>
+            <th v-if="isAsIs" class="px-2 py-2 font-medium">Pain</th>
             <th class="sticky right-0 z-30 bg-surface-gray-2 px-2 py-2"></th>
           </tr>
         </thead>
@@ -88,6 +96,7 @@ function openConnections(uid) {
             :index="index"
             :total="steps.length"
             @edit-connections="openConnections"
+            @edit-pain="openPainPoints"
           />
         </tbody>
       </table>
@@ -95,5 +104,6 @@ function openConnections(uid) {
 
     <PasteDialog v-model="pasteOpen" />
     <ConnectionEditorDialog v-model="connection.open" :uid="connection.uid" />
+    <PainPointDialog v-model="pain.open" :uid="pain.uid" />
   </div>
 </template>

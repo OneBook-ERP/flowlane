@@ -9,6 +9,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Button, FeatherIcon } from 'frappe-ui'
 import WizardStepPanel from './WizardStepPanel.vue'
 import ConnectionEditorDialog from './ConnectionEditorDialog.vue'
+import PainPointEditor from './PainPointEditor.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { doctypes } from '@/data/erpnext.js'
 import { isDecisionType, nextBranchLabel, clampIndex } from '@/map/wizard.js'
@@ -24,6 +25,9 @@ const currentIndex = computed(() =>
 )
 const currentStep = computed(() => steps.value[currentIndex.value] || null)
 const isDecision = computed(() => isDecisionType(currentStep.value?.node_type))
+// Pain points are an As-Is concern (PLAN F17); only surface the editor there so a
+// To-Be map is not cluttered with As-Is issues.
+const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
@@ -194,6 +198,15 @@ function addBranch() {
                 </span>
               </li>
             </ul>
+          </div>
+
+          <!-- pain points (As-Is issues, T5.2) -->
+          <div v-if="isAsIs" class="mt-6 border-t border-outline-gray-1 pt-4">
+            <h4 class="mb-2 flex items-center gap-2 text-sm font-medium text-ink-gray-8">
+              <FeatherIcon name="alert-triangle" class="h-3.5 w-3.5 text-ink-red-3" />
+              Pain Points
+            </h4>
+            <PainPointEditor :step="currentStep" />
           </div>
         </div>
 

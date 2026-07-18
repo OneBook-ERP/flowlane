@@ -11,13 +11,14 @@
 // through as `to_step_id`. No uid->step_id table is needed; the visible label
 // carries the human step_id / step_name.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { Button, FeatherIcon, call } from 'frappe-ui'
+import { Button, FeatherIcon, Tooltip, call } from 'frappe-ui'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { diagramMeta, nodeShapeMap, laneOrderMap } from '@/data/diagramMeta.js'
 import { generateSwimlane } from '@/diagram/generateSwimlane.js'
 import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
 import DiagramNodePanel from './DiagramNodePanel.vue'
+import ExportMenu from './ExportMenu.vue'
 
 const store = useMapStore()
 const svgRef = ref(null)
@@ -35,6 +36,19 @@ const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
 )
 const hasSteps = computed(() => store.state.steps.length > 0)
+
+// Pain-point count per node (keyed by the engine step_id == row uid) so the
+// diagram can flag As-Is issues without touching the pure engine's contract.
+const painCounts = computed(() => {
+  const counts = {}
+  store.state.steps.forEach((row) => {
+    const n = (row.pain_points || []).length
+    if (n) counts[row.uid] = n
+  })
+  return counts
+})
+
+const getSvg = () => svgRef.value
 
 // Store rows -> engine input (uid form, shape resolved from the node-type map).
 const engineSteps = computed(() => {
@@ -203,24 +217,35 @@ function labelStrip(lane) {
   <div class="flex h-full flex-col">
     <!-- toolbar -->
     <div class="flex items-center gap-2 border-b border-outline-gray-1 px-4 py-2">
-      <Button variant="subtle" @click="toggleDirection">
-        <template #prefix>
-          <FeatherIcon
-            :name="direction === 'TB' ? 'arrow-down' : 'arrow-right'"
-            class="h-4 w-4"
-          />
-        </template>
-        {{ direction === 'TB' ? 'Top-to-Bottom' : 'Left-to-Right' }}
-      </Button>
-      <Button variant="subtle" :disabled="!hasManual" @click="autoArrange">
-        <template #prefix><FeatherIcon name="grid" class="h-4 w-4" /></template>
-        Auto-arrange
-      </Button>
+      <Tooltip text="Toggle flow direction (Top-to-Bottom / Left-to-Right)">
+        <Button variant="subtle" @click="toggleDirection">
+          <template #prefix>
+            <FeatherIcon
+              :name="direction === 'TB' ? 'arrow-down' : 'arrow-right'"
+              class="h-4 w-4"
+            />
+          </template>
+          {{ direction === 'TB' ? 'Top-to-Bottom' : 'Left-to-Right' }}
+        </Button>
+      </Tooltip>
+      <Tooltip text="Clear manual positions and auto-lay out">
+        <Button variant="subtle" :disabled="!hasManual" @click="autoArrange">
+          <template #prefix><FeatherIcon name="grid" class="h-4 w-4" /></template>
+          Auto-arrange
+        </Button>
+      </Tooltip>
       <p class="text-xs text-ink-gray-5">
         Click a node for details · drag to reposition
       </p>
-      <div class="ml-auto text-xs text-ink-gray-5">
-        {{ store.state.saving ? 'Saving…' : store.state.dirty ? 'Unsaved changes' : 'All changes saved' }}
+      <div class="ml-auto flex items-center gap-3">
+        <ExportMenu
+          :get-svg="getSvg"
+          :title="store.state.header.map_title || 'flowlane-map'"
+          :disabled="!hasSteps"
+        />
+        <span class="text-xs text-ink-gray-5">
+          {{ store.state.saving ? 'Saving…' : store.state.dirty ? 'Unsaved changes' : 'All changes saved' }}
+        </span>
       </div>
     </div>
 
@@ -360,6 +385,29 @@ function labelStrip(lane) {
           >
             {{ node.label }}
           </text>
+          <!-- pain-point badge: As-Is issues flagged on the node (T5.2/T5.3) -->
+          <g v-if="painCounts[node.step_id]">
+            <title>{{ painCounts[node.step_id] }} pain point(s)</title>
+            <circle
+              :cx="node.x + (node.w || 150) / 2 - 6"
+              :cy="node.y - (node.h || 58) / 2 + 6"
+              r="8"
+              fill="#dc2626"
+              stroke="#ffffff"
+              stroke-width="1.5"
+            />
+            <text
+              :x="node.x + (node.w || 150) / 2 - 6"
+              :y="node.y - (node.h || 58) / 2 + 6"
+              fill="#ffffff"
+              font-size="9"
+              font-weight="700"
+              text-anchor="middle"
+              dominant-baseline="central"
+            >
+              {{ painCounts[node.step_id] }}
+            </text>
+          </g>
         </g>
       </svg>
       </div>

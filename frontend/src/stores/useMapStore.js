@@ -182,6 +182,35 @@ export function createMapStore(mapName) {
     }
   }
 
+  // --- pain point operations (As-Is issues, T5.2) -------------------------
+
+  function addPainPoint(uid, patch = {}) {
+    const step = findStep(uid)
+    if (!step) return
+    step.pain_points.push({
+      description: patch.description || '',
+      pain_type: patch.pain_type || '',
+      severity: patch.severity || 'Medium',
+    })
+    scheduleSave()
+  }
+
+  function setPainPoint(uid, index, patch) {
+    const step = findStep(uid)
+    if (step && step.pain_points[index]) {
+      Object.assign(step.pain_points[index], patch)
+      scheduleSave()
+    }
+  }
+
+  function removePainPoint(uid, index) {
+    const step = findStep(uid)
+    if (step && step.pain_points[index]) {
+      step.pain_points.splice(index, 1)
+      scheduleSave()
+    }
+  }
+
   function findStep(uid) {
     return state.steps.find((step) => step.uid === uid)
   }
@@ -202,6 +231,9 @@ export function createMapStore(mapName) {
     addConnection,
     setConnection,
     removeConnection,
+    addPainPoint,
+    setPainPoint,
+    removePainPoint,
     findStep,
   }
 }
