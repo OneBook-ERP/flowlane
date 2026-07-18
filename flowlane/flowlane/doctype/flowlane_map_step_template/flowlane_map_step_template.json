@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-07-18 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sub_process_template",
+  "step_key",
+  "step_name",
+  "lane_role",
+  "node_type",
+  "sequence",
+  "connections"
+ ],
+ "fields": [
+  {
+   "fieldname": "sub_process_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sub Process Template",
+   "options": "Flowlane Sub Process Template",
+   "reqd": 1
+  },
+  {
+   "fieldname": "step_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Step Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "step_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Step Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lane_role",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Lane Role",
+   "options": "Flowlane Lane Role",
+   "reqd": 1
+  },
+  {
+   "fieldname": "node_type",
+   "fieldtype": "Link",
+   "label": "Node Type",
+   "options": "Flowlane Node Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "connections",
+   "fieldtype": "Table",
+   "label": "Connections",
+   "options": "Flowlane Map Step Template Connection"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 0,
+ "links": [],
+ "modified": "2026-07-18 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flowlane",
+ "name": "Flowlane Map Step Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "step_name",
+ "track_changes": 1
+}
