@@ -19,6 +19,9 @@ import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
 import { laneAtCross } from '@/diagram/laneHit.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
 import { doctypes } from '@/data/erpnext.js'
+import { nodeTypeColor } from '@/diagram/nodeColors.js'
+import { severityChip, maxSeverity } from '@/ui/chipColors.js'
+import RisksStrip from './RisksStrip.vue'
 
 const store = useMapStore()
 const svgRef = ref(null)
@@ -36,16 +39,33 @@ const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
 )
 const hasSteps = computed(() => store.state.steps.length > 0)
+const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
-// Pain-point count per node (keyed by the engine step_id == row uid) so the
-// diagram can flag As-Is issues without touching the pure engine's contract.
+// Pain-point count + worst severity per node (keyed by the engine step_id ==
+// row uid) so the diagram can flag As-Is issues without touching the pure
+// engine's contract. Severity drives the badge color (UI-REVAMP §3/§4) via
+// the same chipColors.js every other severity chip in the app reads.
 const painCounts = computed(() => {
   const counts = {}
   store.state.steps.forEach((row) => {
-    const n = (row.pain_points || []).length
-    if (n) counts[row.uid] = n
+    const points = row.pain_points || []
+    if (points.length) {
+      counts[row.uid] = { count: points.length, severity: maxSeverity(points.map((p) => p.severity)) }
+    }
   })
   return counts
+})
+
+// Node-type hue lookup by engine step_id (== row uid) — the SAME color
+// source Table's GridCell dot and StepInspector's header dot use
+// (diagram/nodeColors.js), so shape + color read as one vocabulary across
+// Table, Diagram and the Inspector (UI-REVAMP §3).
+const nodeHues = computed(() => {
+  const hues = {}
+  store.state.steps.forEach((row) => {
+    hues[row.uid] = nodeTypeColor(row.node_type).hex
+  })
+  return hues
 })
 
 const getSvg = () => svgRef.value
@@ -242,12 +262,20 @@ function bandRect(lane) {
     : { x: 0, y: lane.pos, width: diagram.value.width, height: lane.size }
 }
 
+// Node-type fill wash: a LIGHT tint (low fill-opacity), not a saturated
+// block — restrained per ui-design ("color sparingly... small components").
+function nodeFill(node) {
+  return nodeHues.value[node.step_id] || nodeTypeColor('').hex
+}
+
 // Selected-node highlight (replaces the old floating detail panel as the only
-// "this is the node you clicked" cue, now that details live in the Inspector).
+// "this is the node you clicked" cue, now that details live in the Inspector)
+// takes priority; otherwise the border itself carries the node-type hue —
+// shape + color together are the "one vocabulary" §3 asks for.
 function nodeStroke(node) {
   return node.step_id === selectedUid.value
     ? { stroke: '#2563eb', 'stroke-width': '2.5' }
-    : { stroke: '#475569', 'stroke-width': '1.5' }
+    : { stroke: nodeFill(node), 'stroke-width': '1.5' }
 }
 
 // The lane-label header: the flow-start slice of the band (top for TB, left for LR).
@@ -281,7 +309,7 @@ function labelStrip(lane) {
         </Button>
       </Tooltip>
       <Tooltip text="Add a new step to this map">
-        <Button variant="subtle" @click="addNode">
+        <Button variant="solid" @click="addNode">
           <template #prefix><FeatherIcon name="plus" class="h-4 w-4" /></template>
           Add Node
         </Button>
@@ -395,14 +423,16 @@ function labelStrip(lane) {
               :cy="geo.cy"
               :rx="geo.rx"
               :ry="geo.ry"
-              fill="#ffffff"
+              :fill="nodeFill(node)"
+              fill-opacity="0.16"
               v-bind="nodeStroke(node)"
             />
             <polygon
               v-else-if="geo.kind === 'polygon'"
               :key="`s-${node.step_id}`"
               :points="pointsAttr(geo.points)"
-              fill="#ffffff"
+              :fill="nodeFill(node)"
+              fill-opacity="0.16"
               v-bind="nodeStroke(node)"
             />
             <rect
@@ -413,7 +443,8 @@ function labelStrip(lane) {
               :width="geo.width"
               :height="geo.height"
               :rx="geo.rx"
-              fill="#ffffff"
+              :fill="nodeFill(node)"
+              fill-opacity="0.16"
               v-bind="nodeStroke(node)"
             />
           </template>
@@ -427,14 +458,18 @@ function labelStrip(lane) {
           >
             {{ node.label }}
           </text>
-          <!-- pain-point badge: As-Is issues flagged on the node (T5.2/T5.3) -->
+          <!-- pain-point badge: As-Is issues flagged on the node (T5.2/T5.3,
+               UI-REVAMP §4). Color is the WORST severity among that node's
+               pain points, from the same chipColors.js the Risks strip and
+               PainPointEditor use — a red badge always means at least one
+               High-severity issue, not just "issues exist". -->
           <g v-if="painCounts[node.step_id]">
-            <title>{{ painCounts[node.step_id] }} pain point(s)</title>
+            <title>{{ painCounts[node.step_id].count }} pain point(s) — worst severity {{ painCounts[node.step_id].severity }}</title>
             <circle
               :cx="node.x + (node.w || 150) / 2 - 6"
               :cy="node.y - (node.h || 58) / 2 + 6"
               r="8"
-              fill="#dc2626"
+              :fill="severityChip(painCounts[node.step_id].severity).hex"
               stroke="#ffffff"
               stroke-width="1.5"
             />
@@ -447,12 +482,17 @@ function labelStrip(lane) {
               text-anchor="middle"
               dominant-baseline="central"
             >
-              {{ painCounts[node.step_id] }}
+              {{ painCounts[node.step_id].count }}
             </text>
           </g>
         </g>
       </svg>
       </div>
     </div>
+
+    <!-- Risks strip (UI-REVAMP §4): As-Is only, reads the already-loaded
+         store steps, no new fetch. Selecting a row opens that node in the
+         same shared Inspector a canvas click would. -->
+    <RisksStrip v-if="isAsIs" :steps="store.state.steps" @select="selectedUid = $event" />
   </div>
 </template>

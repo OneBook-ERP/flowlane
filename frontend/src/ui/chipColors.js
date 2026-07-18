@@ -63,12 +63,20 @@ export function severityChip(severity) {
   return SEVERITY_CHIPS[severity] || SEVERITY_CHIPS.Low
 }
 
-// Highest-severity-wins ordering, used to pick one badge color for a node
-// that carries several pain points of different severities.
+// Severity ordering (Low < Medium < High) — the one ranking every
+// severity-sorting consumer (the diagram's per-node badge color, the Risks
+// strip's worst-first order) shares, so "which severity wins" is never
+// redefined twice.
 const SEVERITY_RANK = { Low: 0, Medium: 1, High: 2 }
+export function severityRank(severity) {
+  return SEVERITY_RANK[severity] ?? SEVERITY_RANK.Low
+}
+
+// Highest-severity-wins pick, used for a node badge that carries several
+// pain points of different severities.
 export function maxSeverity(severities) {
   return severities.reduce(
-    (max, s) => (SEVERITY_RANK[s] > SEVERITY_RANK[max] ? s : max),
+    (max, s) => (severityRank(s) > severityRank(max) ? s : max),
     'Low'
   )
 }

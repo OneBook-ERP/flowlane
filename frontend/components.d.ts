@@ -31,6 +31,7 @@ declare module 'vue' {
     PasteDialog: typeof import('./src/components/editor/PasteDialog.vue')['default']
     ProcessDialog: typeof import('./src/components/ProcessDialog.vue')['default']
     RenameDialog: typeof import('./src/components/RenameDialog.vue')['default']
+    RisksStrip: typeof import('./src/components/editor/RisksStrip.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StatusChip: typeof import('./src/components/StatusChip.vue')['default']

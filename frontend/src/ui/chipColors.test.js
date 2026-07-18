@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { statusChip, mapTypeChip, clientStatusChip, severityChip, maxSeverity } from './chipColors.js'
+import {
+  statusChip,
+  mapTypeChip,
+  clientStatusChip,
+  severityChip,
+  severityRank,
+  maxSeverity,
+} from './chipColors.js'
 
 describe('statusChip', () => {
   it('gives each workflow status a distinct low-saturation chip', () => {
@@ -37,6 +44,14 @@ describe('severityChip', () => {
       expect(severityChip(s).hex).toMatch(/^#[0-9a-f]{6}$/)
     }
     expect(severityChip('')).toEqual(severityChip('Low'))
+  })
+})
+
+describe('severityRank', () => {
+  it('orders Low < Medium < High and defaults unknowns to Low', () => {
+    expect(severityRank('Low')).toBeLessThan(severityRank('Medium'))
+    expect(severityRank('Medium')).toBeLessThan(severityRank('High'))
+    expect(severityRank('')).toBe(severityRank('Low'))
   })
 })
 
