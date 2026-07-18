@@ -40,11 +40,12 @@ const activeKey = ref(tabs.value[0].key)
 const activeTab = computed(() => tabs.value.find((t) => t.key === activeKey.value) || tabs.value[0])
 
 // Selecting a different step (Table row, Wizard rail, Diagram node) resets to
-// General — the previous tab's field group rarely applies to the new step.
+// the first tab (General) — the previous tab's field group rarely applies to
+// the new step.
 watch(
   () => props.step.uid,
   () => {
-    activeKey.value = 'General'
+    activeKey.value = FIELD_GROUPS[0].group
   }
 )
 
