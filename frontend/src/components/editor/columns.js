@@ -2,26 +2,65 @@
 //   text    -> plain text input
 //   master  -> Combobox over a data/masters key (`master`)
 //   doctype -> Combobox over the live ERPNext DocType list
+//
+// Layout metadata (UI-REVAMP B1):
+//   min      -> fixed column width in px (the grid is table-fixed, so this is the
+//               actual width; the whole grid scrolls horizontally to reveal all 15
+//               fields rather than squeezing every cell).
+//   sticky   -> pin this column to the left while scrolling right (row identity).
+//   ellipsis -> long free-text: single-line ellipsis + hover tooltip, no hard clip.
+//   dot      -> render a node-type color dot in the cell (D6).
+//   tip      -> show the full value on hover even though the column is wide.
+//
 // PASTE_FIELDS is the positional column order used by Excel paste (the first six
-// grid columns), documented so the parser and the grid agree.
+// grid columns), documented so the parser and the grid agree — keep those first.
 
 export const COLUMNS = [
-  { field: 'step_id', label: 'Step ID', type: 'text', width: 'w-24' },
-  { field: 'step_name', label: 'Step Name', type: 'text', width: 'w-56' },
-  { field: 'lane_role', label: 'Lane Role', type: 'master', master: 'lane_role', width: 'w-44' },
-  { field: 'node_type', label: 'Node Type', type: 'master', master: 'node_type', width: 'w-40' },
-  { field: 'trigger_input', label: 'Trigger / Input', type: 'text', width: 'w-48' },
-  { field: 'output_result', label: 'Output / Result', type: 'text', width: 'w-48' },
-  { field: 'erpnext_module', label: 'ERPNext Module', type: 'master', master: 'erpnext_module', width: 'w-40' },
-  { field: 'erpnext_doctype', label: 'ERPNext DocType', type: 'doctype', width: 'w-48' },
-  { field: 'workflow_state', label: 'Workflow State', type: 'text', width: 'w-40' },
-  { field: 'key_data_fields', label: 'Key Data Fields', type: 'text', width: 'w-48' },
-  { field: 'business_rules', label: 'Business Rules', type: 'text', width: 'w-56' },
-  { field: 'exceptions', label: 'Exceptions', type: 'text', width: 'w-48' },
-  { field: 'controls_approvals', label: 'Controls / Approvals', type: 'text', width: 'w-48' },
-  { field: 'integrations', label: 'Integrations', type: 'text', width: 'w-44' },
-  { field: 'kpis', label: 'KPIs', type: 'text', width: 'w-40' },
+  { field: 'step_id', label: 'Step ID', type: 'text', min: 104, sticky: true },
+  { field: 'step_name', label: 'Step Name', type: 'text', min: 220, sticky: true, tip: true },
+  { field: 'lane_role', label: 'Lane Role', type: 'master', master: 'lane_role', min: 168 },
+  { field: 'node_type', label: 'Node Type', type: 'master', master: 'node_type', min: 172, dot: true },
+  { field: 'trigger_input', label: 'Trigger / Input', type: 'text', min: 200, ellipsis: true },
+  { field: 'output_result', label: 'Output / Result', type: 'text', min: 200, ellipsis: true },
+  { field: 'erpnext_module', label: 'ERPNext Module', type: 'master', master: 'erpnext_module', min: 168 },
+  { field: 'erpnext_doctype', label: 'ERPNext DocType', type: 'doctype', min: 190 },
+  { field: 'workflow_state', label: 'Workflow State', type: 'text', min: 168 },
+  { field: 'key_data_fields', label: 'Key Data Fields', type: 'text', min: 200, ellipsis: true },
+  { field: 'business_rules', label: 'Business Rules', type: 'text', min: 220, ellipsis: true },
+  { field: 'exceptions', label: 'Exceptions', type: 'text', min: 200, ellipsis: true },
+  { field: 'controls_approvals', label: 'Controls / Approvals', type: 'text', min: 200, ellipsis: true },
+  { field: 'integrations', label: 'Integrations', type: 'text', min: 190, ellipsis: true },
+  { field: 'kpis', label: 'KPIs', type: 'text', min: 180, ellipsis: true },
 ]
+
+// Fixed-width utility lanes (flex-shrink:0 slots, per ui-design density rhythm):
+// the leading order/index column and the trailing action columns.
+export const INDEX_COL_WIDTH = 56
+export const CONNECTIONS_COL_WIDTH = 104
+export const PAIN_COL_WIDTH = 88
+export const DELETE_COL_WIDTH = 48
+
+// Left offset (px) for each sticky column, measured from the grid's left edge:
+// the index lane, then each preceding sticky column. Assumes sticky columns are
+// contiguous and leading (Step ID, Step Name), which the grid guarantees. Pure so
+// the header and body rows compute identical offsets.
+export function stickyLeftOffsets(columns = COLUMNS, indexWidth = INDEX_COL_WIDTH) {
+  const offsets = {}
+  let left = indexWidth
+  for (const column of columns) {
+    if (!column.sticky) continue
+    offsets[column.field] = left
+    left += column.min
+  }
+  return offsets
+}
+
+// Total intrinsic grid width so the table can overflow and scroll horizontally.
+export function tableMinWidth(columns = COLUMNS, { isAsIs = false } = {}) {
+  const fields = columns.reduce((sum, column) => sum + column.min, 0)
+  const trailing = CONNECTIONS_COL_WIDTH + (isAsIs ? PAIN_COL_WIDTH : 0) + DELETE_COL_WIDTH
+  return INDEX_COL_WIDTH + fields + trailing
+}
 
 // Excel paste maps its columns positionally onto these fields (first six columns).
 export const PASTE_FIELDS = COLUMNS.slice(0, 6).map((column) => column.field)

@@ -5,7 +5,15 @@
 // orchestrates the grid, the paste dialog, and the per-row connection editor.
 import { ref, computed, onMounted } from 'vue'
 import { Button, FeatherIcon } from 'frappe-ui'
-import { COLUMNS } from './columns.js'
+import {
+  COLUMNS,
+  INDEX_COL_WIDTH,
+  CONNECTIONS_COL_WIDTH,
+  PAIN_COL_WIDTH,
+  DELETE_COL_WIDTH,
+  stickyLeftOffsets,
+  tableMinWidth,
+} from './columns.js'
 import StepRow from './StepRow.vue'
 import PasteDialog from './PasteDialog.vue'
 import ConnectionEditorDialog from './ConnectionEditorDialog.vue'
@@ -15,6 +23,7 @@ import { doctypes } from '@/data/erpnext.js'
 
 const store = useMapStore()
 const columns = COLUMNS
+const offsets = stickyLeftOffsets()
 
 const pasteOpen = ref(false)
 const connection = ref({ open: false, uid: '' })
@@ -22,6 +31,9 @@ const pain = ref({ open: false, uid: '' })
 
 const steps = computed(() => store.state.steps)
 const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
+// Fixed total width so the grid overflows and scrolls horizontally as a whole,
+// rather than squeezing every column (UI-REVAMP B1).
+const gridWidth = computed(() => tableMinWidth(columns, { isAsIs: isAsIs.value }))
 const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
   if (store.state.dirty) return 'Unsaved changes'
@@ -76,11 +88,24 @@ function openPainPoints(uid) {
       >
         No steps yet. Use “Add Row” or paste from a spreadsheet.
       </p>
-      <table v-else class="min-w-full border-collapse text-sm">
-        <thead class="sticky top-0 z-20 bg-surface-gray-2 text-left text-xs text-ink-gray-6">
+      <table v-else class="table-fixed border-collapse text-sm" :style="{ width: gridWidth + 'px' }">
+        <colgroup>
+          <col :style="{ width: INDEX_COL_WIDTH + 'px' }" />
+          <col v-for="column in columns" :key="column.field" :style="{ width: column.min + 'px' }" />
+          <col :style="{ width: CONNECTIONS_COL_WIDTH + 'px' }" />
+          <col v-if="isAsIs" :style="{ width: PAIN_COL_WIDTH + 'px' }" />
+          <col :style="{ width: DELETE_COL_WIDTH + 'px' }" />
+        </colgroup>
+        <thead class="sticky top-0 z-20 bg-surface-gray-2 text-left text-xs font-medium text-ink-gray-6">
           <tr>
             <th class="sticky left-0 z-30 bg-surface-gray-2 px-2 py-2">#</th>
-            <th v-for="column in columns" :key="column.field" class="px-2 py-2 font-medium">
+            <th
+              v-for="column in columns"
+              :key="column.field"
+              class="truncate px-2 py-2 font-medium"
+              :class="column.sticky ? 'sticky z-30 bg-surface-gray-2' : ''"
+              :style="column.sticky ? { left: offsets[column.field] + 'px' } : null"
+            >
               {{ column.label }}
             </th>
             <th class="px-2 py-2 font-medium">Connections</th>

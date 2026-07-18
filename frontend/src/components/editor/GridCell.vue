@@ -2,10 +2,16 @@
 // One editable grid cell. `text` renders a plain input; `master` and `doctype`
 // render a searchable Combobox over the seeded masters or the live DocType list.
 // Writes flow straight to the shared store (setField), which schedules autosave.
+//
+// Density affordances (UI-REVAMP B1/D6):
+//   - node-type cells carry a color dot matching the diagram vocabulary;
+//   - long free-text cells ellipsize when unfocused and reveal the full value in a
+//     hover tooltip (and by focusing the input) — no hard mid-word clipping.
 import { computed } from 'vue'
-import { FormControl, Combobox } from 'frappe-ui'
+import { FormControl, Combobox, Tooltip } from 'frappe-ui'
 import { masterOptions } from '@/data/masters.js'
 import { doctypeOptions } from '@/data/erpnext.js'
+import { nodeTypeColor } from '@/diagram/nodeColors.js'
 import { useMapStore } from '@/stores/useMapStore.js'
 
 const props = defineProps({
@@ -23,19 +29,44 @@ const options = computed(() => {
   return []
 })
 
+// Show the full value on hover for long free-text (ellipsis) and pinned columns.
+const tipText = computed(() =>
+  (props.column.ellipsis || props.column.tip) && value.value ? String(value.value) : '',
+)
+
+const dotClass = computed(() => nodeTypeColor(value.value).dot)
+
 function onInput(next) {
   store.setField(props.step.uid, props.column.field, next ?? '')
 }
 </script>
 
 <template>
-  <FormControl
-    v-if="column.type === 'text'"
-    type="text"
-    size="sm"
-    :modelValue="value"
-    @update:modelValue="onInput"
-  />
+  <!-- node-type: color dot + selector (D6) -->
+  <div v-if="column.dot" class="flex items-center gap-2">
+    <span class="h-2 w-2 flex-shrink-0 rounded-full" :class="dotClass" aria-hidden="true" />
+    <Combobox
+      class="min-w-0 flex-1"
+      size="sm"
+      :options="options"
+      :modelValue="value"
+      :placeholder="`Select ${column.label}`"
+      @update:modelValue="onInput"
+    />
+  </div>
+
+  <!-- free-text: ellipsis when unfocused, full value on hover -->
+  <Tooltip v-else-if="column.type === 'text'" :text="tipText" :disabled="!tipText" :hover-delay="0.4">
+    <FormControl
+      class="gridcell-text w-full"
+      type="text"
+      size="sm"
+      :modelValue="value"
+      @update:modelValue="onInput"
+    />
+  </Tooltip>
+
+  <!-- master / doctype selector -->
   <Combobox
     v-else
     size="sm"
@@ -46,3 +77,11 @@ function onInput(next) {
     @update:modelValue="onInput"
   />
 </template>
+
+<style scoped>
+/* Long values collapse to a single-line ellipsis while unfocused; focusing the
+   input scrolls to the caret so the whole value is reachable (expand-on-focus). */
+.gridcell-text :deep(input) {
+  text-overflow: ellipsis;
+}
+</style>
