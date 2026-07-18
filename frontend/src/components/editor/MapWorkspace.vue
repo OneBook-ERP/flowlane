@@ -36,7 +36,17 @@ onMounted(() => store.load())
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-1">
+  <!-- min-w-0 is load-bearing here, not decorative: this div is a flex-1 item
+       inside #editor-tabs (ClientWorkspace.vue), a row flex container. Without
+       an explicit min-width, a flex item's automatic minimum width defaults to
+       its content's min-content size (here, TableTab's wide fixed-width
+       <table>), so this div refused to shrink to the available space and the
+       overflow was silently clipped by an ancestor's overflow-hidden instead
+       of ever reaching TableTab's own overflow-auto div — the Table tab's
+       horizontal scroll (UI-REVAMP B1) never fired. Match this on every
+       flex-1 width-bearing wrapper down this tree (see the child div right
+       below, and #editor-tabs itself). -->
+  <div class="flex h-full min-h-0 min-w-0 flex-1">
     <div class="min-w-0 flex-1">
       <MapTabs ref="mapTabsRef" />
     </div>

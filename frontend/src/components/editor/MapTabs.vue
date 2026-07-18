@@ -42,7 +42,12 @@ defineExpose({
       </button>
     </nav>
 
-    <div class="min-h-0 flex-1">
+    <!-- min-w-0 alongside min-h-0: TableTab's grid and DiagramTab's SVG are
+         both wider than the viewport at any real step count and rely on their
+         own overflow-auto div to scroll — that only works if every ancestor
+         in the chain has a bounded width instead of growing to content size
+         (see MapWorkspace.vue's root div for the full explanation). -->
+    <div class="min-h-0 min-w-0 flex-1">
       <TableTab v-if="active === 'table'" />
       <DiagramTab v-else-if="active === 'diagram'" ref="diagramRef" />
       <WizardTab v-else-if="active === 'wizard'" />
