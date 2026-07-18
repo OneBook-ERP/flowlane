@@ -2,7 +2,7 @@
 // Map editor tab bar (S6). Phase 2 delivers the Table tab, Phase 3 the Diagram tab,
 // and Phase 4 the Wizard tab. All three are views over one shared store (created in
 // the workspace shell) — edits in any tab flow to the others through it.
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import TableTab from './TableTab.vue'
 import DiagramTab from './DiagramTab.vue'
 import WizardTab from './WizardTab.vue'
@@ -18,9 +18,17 @@ const diagramRef = ref(null)
 // The top bar's Export control (UI step U2/B4) lives outside this tab tree, so
 // it reaches the live diagram SVG through this exposed accessor instead of a
 // prop — Export only works while the Diagram tab is actually mounted.
+// `selectedStep` forwards DiagramTab's clicked-node selection reactively the
+// same way (a computed here, auto-unwrapped through the exposed proxy like
+// `activeTab`), up to MapWorkspace.vue so it can dock that step in the shared
+// right-column Inspector instead of a floating panel. Switching away from
+// Diagram unmounts it (v-else-if below), so diagramRef goes null and this
+// naturally reads back null — no stale selection lingers.
 defineExpose({
   activeTab: active,
   getSvg: () => diagramRef.value?.getSvg?.(),
+  selectedStep: computed(() => diagramRef.value?.selectedStep ?? null),
+  clearSelectedStep: () => diagramRef.value?.clearSelectedStep?.(),
 })
 </script>
 

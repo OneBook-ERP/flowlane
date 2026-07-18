@@ -33,9 +33,17 @@ const isDiagramActive = computed(() => mapTabsRef.value?.activeTab === 'diagram'
 const saveLabel = computed(() =>
   store.state.saving ? 'Saving…' : store.state.dirty ? 'Unsaved changes' : 'All changes saved'
 )
+// The Diagram tab's clicked-node selection, reactively forwarded through
+// MapTabs — see MapTabs.vue's defineExpose. MapSettingsInspector shows this
+// step (via StepInspector) instead of Map Settings while it's non-null.
+const diagramSelectedStep = computed(() => mapTabsRef.value?.selectedStep ?? null)
 
 function getSvg() {
   return mapTabsRef.value?.getSvg?.()
+}
+
+function clearDiagramSelection() {
+  mapTabsRef.value?.clearSelectedStep?.()
 }
 
 onMounted(() => store.load())
@@ -59,7 +67,9 @@ onMounted(() => store.load())
     <MapSettingsInspector
       v-model:collapsed="inspectorCollapsed"
       :store="store"
+      :selected-step="diagramSelectedStep"
       :class="overlayInspector ? 'absolute inset-y-0 right-0 z-20 shadow-lg' : ''"
+      @clear-selected-step="clearDiagramSelection"
     />
   </div>
 

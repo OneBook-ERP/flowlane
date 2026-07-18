@@ -64,24 +64,39 @@ bar's `#topbar-status-slot` (a parent component can't `inject()` a descendant's
 (`MapTabs.vue` exposes `{ getSvg, activeTab }` via `defineExpose` for exactly
 this) — the SVG only exists in the DOM while that tab is active.
 
-**Inspector mount slot (map-level, U2):** `components/editor/MapSettingsInspector.vue`
-is the workspace shell's right-column inspector. It only holds map-level settings
-(Direction / Status / Version / Type badge) — the fields that used to sit on the
-removed "Open Editor" detail page. Its former "Step inspector mounts here (U3)"
-placeholder is deliberately **not** filled: U3 mounts the step inspector at the
-Wizard and Diagram tabs themselves (see below), not in this shared right column,
-so map-level settings and step-level editing stay visually and structurally
-separate. The placeholder comment now records that decision instead of pointing
-at unbuilt work.
+**Inspector mount slot (map-level + selected step):**
+`components/editor/MapSettingsInspector.vue` is the workspace shell's ONE
+right-column inspector — exactly the "Inspector (context) — selected step /
+map settings" box in UI-REVAMP.md's B2 target layout. By default it shows
+map-level settings (Direction / Status / Version / Type badge — the fields
+that used to sit on the removed "Open Editor" detail page). It takes a
+`selectedStep` prop; when non-null it swaps to the shared `StepInspector.vue`
+for that step instead (with a "Back to Map Settings" button), reactively
+forwarded from `DiagramTab.vue`'s clicked-node selection through
+`MapTabs.vue` -> `MapWorkspace.vue` (see `MapTabs.vue`'s `defineExpose` and
+`MapWorkspace.vue`'s `diagramSelectedStep` computed — the same
+`getSvg`/`activeTab` bridge pattern, extended). Switching to Table or Wizard
+unmounts `DiagramTab`, so the selection naturally clears — no stale step
+lingers in the inspector after leaving the tab that selected it.
+
+This routing REPLACED a separate floating `DiagramNodePanel.vue` overlay U3
+originally built for the Diagram node click (deleted post-U3, see git log):
+that absolutely-positioned panel's z-index competed with the Table's sticky
+columns and with frappe-ui `Dialog`s in confusing, inconsistent ways (fixed by
+`App.vue`'s `isolate`, but the floating panel was also just a worse fit for
+"D5: docked right" than the one column B2 already specifies). Do not resurrect
+a floating per-tab node panel — route new "show this step's details"
+affordances through this same `selectedStep` prop.
 
 **The shared step inspector (UI step U3 — D4/D5):**
 `components/editor/StepInspector.vue` is the ONE grouped, tabbed editor for a
 Map Step's 15 attributes, mounted at exactly two places:
 - `WizardTab.vue` — inline in the current-step panel (replaces the old flat
-  `WizardStepPanel.vue`, which U3 deleted).
-- `DiagramNodePanel.vue` — docked in the right-side overlay opened by clicking a
-  diagram node (replaces that panel's old read-only field list; it is now
-  genuinely editable).
+  `WizardStepPanel.vue`, which U3 deleted). A deliberately separate,
+  always-visible guided-capture UX — not routed through the shared Inspector
+  column.
+- `MapSettingsInspector.vue` — docked in the shared right-column Inspector
+  when a Diagram node is selected (see above).
 
 Tabs: **General** (step_id, step_name, lane_role, node_type, workflow_state) ·
 **Input/Output** (trigger_input, output_result, key_data_fields) · **Logic &
@@ -106,10 +121,20 @@ docked. Pain Points reuses `PainPointEditor.vue` the same way Wizard always did
 of that same component. Because both `StepInspector` mounts read the step via
 the shared store (`store.findStep(uid)` / the `state.steps` element passed
 down as a prop) and write through the same store mutators
-(`setField`/`addConnection`/`addPainPoint`/…), editing a field from the
-Diagram node panel and reading it from the Wizard rail (or the Table grid) is
-the same reactive object — see `stores/useMapStore.test.js` for a store-level
+(`setField`/`addConnection`/`addPainPoint`/…), editing a field from a selected
+Diagram node and reading it from the Wizard rail (or the Table grid) is the
+same reactive object — see `stores/useMapStore.test.js` for a store-level
 proof of this property.
+
+**Diagram node placement (`src/diagram/laneHit.js`):** dragging a node
+persists `manual_x`/`manual_y` (position) same as before, but now ALSO
+reassigns `lane_role` when the drop lands in a different lane band's
+cross-axis extent (`laneAtCross(lanes, cross)`, pure, unit-tested) — before
+this a node dragged into another lane only moved visually and snapped back to
+its original lane on the next auto-arrange or reload. `DiagramTab.vue` also
+has an "Add Node" toolbar button (`store.addStep()`, then selects it) — parity
+with Table's "Add Row" / Wizard's "Add first step"; the Diagram tab previously
+had no way to create a step at all.
 
 Pure breadcrumb/ancestry logic (no Vue, no network) lives in
 `src/workspace/treeContext.js` — `findMapContext`, `findProcessForSub`,
@@ -177,11 +202,12 @@ Table/Diagram/Wizard internals fill their own panels and are untouched by U2.
 - `src/components/editor/` — `MapWorkspace.vue`, `MapSettingsInspector.vue`
   (both added U2), `MapTabs.vue`, `TableTab.vue`, `StepRow.vue`, `GridCell.vue`,
   `ConnectionEditorDialog.vue`, `ConnectionsList.vue` (U3 extraction), `PasteDialog.vue`,
-  `columns.js` (Phase 2), `DiagramTab.vue`, `DiagramNodePanel.vue` (Phase 3, content
-  replaced U3), `WizardTab.vue` (Phase 4), `StepInspector.vue` (U3 — the shared step
-  inspector, see above), `ExportMenu.vue` (Phase 3, S10) — rendered by
-  `MapWorkspace.vue` via `Teleport` into the top bar, not inline in `DiagramTab.vue`
-  anymore.
+  `columns.js` (Phase 2), `DiagramTab.vue` (Phase 3), `WizardTab.vue` (Phase 4),
+  `StepInspector.vue` (U3 — the shared step inspector, mounted in `WizardTab.vue`
+  and `MapSettingsInspector.vue`, see above; `DiagramNodePanel.vue`, its original
+  Phase-3/U3 floating-overlay host, was deleted post-U3 — do not recreate it),
+  `ExportMenu.vue` (Phase 3, S10) — rendered by `MapWorkspace.vue` via `Teleport`
+  into the top bar, not inline in `DiagramTab.vue` anymore.
 - `src/data/erpnext.js` — cached `doctypes` resource for the ERPNext DocType picker
   (`flowlane.api.erpnext.get_doctypes`). Read options with `doctypeOptions()`.
 

@@ -16,24 +16,21 @@ import { useMapStore } from '@/stores/useMapStore.js'
 import { diagramMeta, nodeShapeMap, laneOrderMap } from '@/data/diagramMeta.js'
 import { generateSwimlane } from '@/diagram/generateSwimlane.js'
 import { shapeGeometry, pointsAttr } from '@/diagram/nodeShapes.js'
+import { laneAtCross } from '@/diagram/laneHit.js'
 import { svgToPng } from '@/diagram/thumbnail.js'
 import { doctypes } from '@/data/erpnext.js'
-import DiagramNodePanel from './DiagramNodePanel.vue'
 
 const store = useMapStore()
 const svgRef = ref(null)
 const empty = { lanes: [], nodes: [], edges: [], width: 0, height: 0, direction: 'TB' }
 const diagram = ref(empty)
 const drag = ref(null) // { uid, x, y } live position while dragging
-const selectedUid = ref('') // node whose detail panel is open
+const selectedUid = ref('') // node whose detail (now in the shared Inspector) is open
 
 const selectedStep = computed(() => store.findStep(selectedUid.value) || null)
 const hasManual = computed(() =>
   store.state.steps.some((s) => s.manual_x !== null || s.manual_y !== null)
 )
-// Pain Points tab only applies to As-Is maps — same rule the Wizard's
-// StepInspector mount uses (PLAN F17).
-const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
@@ -54,8 +51,19 @@ const painCounts = computed(() => {
 const getSvg = () => svgRef.value
 
 // The top bar's relocated Export control reads the live SVG through this
-// (UI step U2/B4) — see MapTabs.vue's defineExpose bridge.
-defineExpose({ getSvg })
+// (UI step U2/B4) — see MapTabs.vue's defineExpose bridge. `selectedStep`
+// (a computed ref — auto-unwrapped through the exposed proxy the same way
+// `activeTab` already is below) lets the clicked node's detail dock in the
+// SAME right-column Inspector Map Settings uses (bug-fix follow-up: it used
+// to be a separate floating overlay on the canvas, which is also what put it
+// above the sticky Table header's z-index in an inconsistent, hard-to-read
+// way) — MapTabs.vue forwards this reactively the same way it forwards
+// activeTab. clearSelectedStep is a plain action, like getSvg.
+defineExpose({
+  getSvg,
+  selectedStep,
+  clearSelectedStep: () => (selectedUid.value = ''),
+})
 
 // Store rows -> engine input (uid form, shape resolved from the node-type map).
 const engineSteps = computed(() => {
@@ -87,9 +95,10 @@ const displayNodes = computed(() =>
 
 onMounted(() => {
   if (!diagramMeta.data) diagramMeta.fetch()
-  // The node panel's ERPNext Setup tab needs the DocType list; Table normally
-  // primes this first (it mounts by default), but fetch defensively here too
-  // since the panel is now genuinely editable (UI step U3).
+  // The Inspector's ERPNext Setup tab (shown when a node is selected here)
+  // needs the DocType list; Table normally primes this first (it mounts by
+  // default), but fetch defensively here too since a Diagram-selected step
+  // is genuinely editable (UI step U3).
   if (!doctypes.data) doctypes.fetch()
 })
 
@@ -147,10 +156,20 @@ function onPointerDown(event, node) {
 }
 
 // Persist the dropped position; the store schedules the autosave that writes
-// manual_x/manual_y, and the next regenerate respects the override.
+// manual_x/manual_y, and the next regenerate respects the override. Dragging
+// a node into a DIFFERENT lane band's cross-axis extent (x for TB, y for LR —
+// see laneHit.js) now also reassigns lane_role, not just position — before
+// this, a node dropped into another lane only moved visually and snapped
+// straight back to its original lane on the next auto-arrange or reload.
 function commitDrag(pos) {
   store.setField(pos.uid, 'manual_x', Math.round(pos.x))
   store.setField(pos.uid, 'manual_y', Math.round(pos.y))
+  const cross = direction.value === 'TB' ? pos.x : pos.y
+  const role = laneAtCross(diagram.value.lanes, cross)
+  const step = store.findStep(pos.uid)
+  if (role && step && role !== step.lane_role) {
+    store.setField(pos.uid, 'lane_role', role)
+  }
 }
 
 // Clear every manual override so the engine re-flows from scratch (F14).
@@ -159,6 +178,14 @@ function autoArrange() {
     if (step.manual_x !== null) store.setField(step.uid, 'manual_x', null)
     if (step.manual_y !== null) store.setField(step.uid, 'manual_y', null)
   })
+}
+
+// Add Node (parity with Table's "Add Row" / Wizard's "Add first step" — the
+// Diagram tab had no way to create a step at all). Selects it immediately so
+// the Inspector opens for the new node, same as clicking any other node.
+function addNode() {
+  const step = store.addStep()
+  selectedUid.value = step.uid
 }
 
 function toSvgPoint(event) {
@@ -215,6 +242,14 @@ function bandRect(lane) {
     : { x: 0, y: lane.pos, width: diagram.value.width, height: lane.size }
 }
 
+// Selected-node highlight (replaces the old floating detail panel as the only
+// "this is the node you clicked" cue, now that details live in the Inspector).
+function nodeStroke(node) {
+  return node.step_id === selectedUid.value
+    ? { stroke: '#2563eb', 'stroke-width': '2.5' }
+    : { stroke: '#475569', 'stroke-width': '1.5' }
+}
+
 // The lane-label header: the flow-start slice of the band (top for TB, left for LR).
 function labelStrip(lane) {
   const gutter = diagram.value.labelGutter
@@ -245,12 +280,21 @@ function labelStrip(lane) {
           Auto-arrange
         </Button>
       </Tooltip>
+      <Tooltip text="Add a new step to this map">
+        <Button variant="subtle" @click="addNode">
+          <template #prefix><FeatherIcon name="plus" class="h-4 w-4" /></template>
+          Add Node
+        </Button>
+      </Tooltip>
       <p class="ml-auto text-xs text-ink-gray-5">
-        Click a node for details · drag to reposition
+        Click a node for details (opens in the Inspector) · drag to reposition or
+        move it into another lane
       </p>
     </div>
 
-    <!-- canvas (scrolls) with a fixed detail overlay on the right -->
+    <!-- canvas (scrolls); node details dock in the shared right-column
+         Inspector (MapSettingsInspector), not a floating panel here — see
+         MapWorkspace.vue / MapSettingsInspector.vue. -->
     <div class="relative min-h-0 flex-1">
       <div class="h-full overflow-auto bg-surface-gray-1 p-4">
       <p
@@ -352,16 +396,14 @@ function labelStrip(lane) {
               :rx="geo.rx"
               :ry="geo.ry"
               fill="#ffffff"
-              stroke="#475569"
-              stroke-width="1.5"
+              v-bind="nodeStroke(node)"
             />
             <polygon
               v-else-if="geo.kind === 'polygon'"
               :key="`s-${node.step_id}`"
               :points="pointsAttr(geo.points)"
               fill="#ffffff"
-              stroke="#475569"
-              stroke-width="1.5"
+              v-bind="nodeStroke(node)"
             />
             <rect
               v-else
@@ -372,8 +414,7 @@ function labelStrip(lane) {
               :height="geo.height"
               :rx="geo.rx"
               fill="#ffffff"
-              stroke="#475569"
-              stroke-width="1.5"
+              v-bind="nodeStroke(node)"
             />
           </template>
           <text
@@ -412,12 +453,6 @@ function labelStrip(lane) {
         </g>
       </svg>
       </div>
-
-      <DiagramNodePanel
-        :step="selectedStep"
-        :is-as-is="isAsIs"
-        @close="selectedUid = ''"
-      />
     </div>
   </div>
 </template>
