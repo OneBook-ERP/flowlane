@@ -200,6 +200,36 @@ describe('generateSwimlane — direction + overrides', () => {
     expect(s1.y).toBe(320)
   })
 
+  // Regression: a Map Step that has never been dragged still round-trips
+  // manual_x/manual_y as 0/0 (the Frappe Float column is NOT NULL DEFAULT 0,
+  // so an unset value can never persist as true null). Before this fix every
+  // never-dragged step collapsed onto the literal (0, 0) origin on load,
+  // forcing a manual "Auto-arrange" click every time to see a usable diagram.
+  it('treats manual_x=0/manual_y=0 as unset, not a real override, on fresh load', () => {
+    const steps = [
+      step('S1', { lane_role: 'Ops', manual_x: 0, manual_y: 0 }),
+      step('S2', { lane_role: 'Ops', manual_x: 0, manual_y: 0 }),
+      step('S3', { lane_role: 'Ops', manual_x: 0, manual_y: 0 }),
+    ]
+    const g = generateSwimlane(steps, 'LR')
+    const positions = g.nodes.map((n) => `${n.x},${n.y}`)
+    expect(new Set(positions).size).toBe(3) // fanned out, not stacked at 0,0
+    g.nodes.forEach((n) => {
+      expect(n.x === 0 && n.y === 0).toBe(false)
+    })
+  })
+
+  // A genuine drag that only zeroes ONE axis is still a real, intentional
+  // override and must be respected — only the never-touched (0, 0) PAIR is
+  // treated as the "unset" sentinel.
+  it('still honours a manual override that legitimately zeroes a single axis', () => {
+    const steps = [step('S1', { manual_x: 0, manual_y: 320, connections: [edge('S2')] }), step('S2', {})]
+    const g = generateSwimlane(steps, 'LR')
+    const s1 = g.nodes.find((n) => n.step_id === 'S1')
+    expect(s1.x).toBe(0)
+    expect(s1.y).toBe(320)
+  })
+
   it('drops edges that point outside the map', () => {
     const g = generateSwimlane([step('S1', { connections: [edge('ghost')] })], 'LR')
     expect(g.edges).toHaveLength(0)

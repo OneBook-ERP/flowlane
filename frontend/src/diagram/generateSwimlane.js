@@ -248,6 +248,7 @@ function placeNodes(nodes, columns, laneIndex, dir) {
     const col = columns.get(node.step_id) || 0
     const lane = laneIndex.get(node.role) || 0
     const auto = cellCenter(col, lane, dir)
+    const manual = hasManualOverride(node)
     return {
       step_id: node.step_id,
       label: node.label,
@@ -256,12 +257,28 @@ function placeNodes(nodes, columns, laneIndex, dir) {
       node_type: node.node_type,
       col,
       laneIndex: lane,
-      x: node.manual_x ?? auto.x,
-      y: node.manual_y ?? auto.y,
+      x: manual ? node.manual_x : auto.x,
+      y: manual ? node.manual_y : auto.y,
       w: NODE_W,
       h: NODE_H,
     }
   })
+}
+
+// A step that has never been dragged still round-trips manual_x/manual_y as
+// 0/0, not null: the backing Map Step field is a Frappe Float, and Frappe's
+// schema generator makes Float columns NOT NULL DEFAULT 0 (see
+// frappe/database/schema.py NOT_NULL_TYPES) — an unset value can never persist
+// as true NULL, so every "never touched" row loads back as (0, 0). Treating
+// that as a real override collapses every untouched node onto one point, which
+// is exactly what forced a manual "Auto-arrange" click on every load. Every
+// auto-computed position already sits past MARGIN/LABEL_GUTTER, so a genuine
+// drag essentially never lands a node at the literal (0, 0) origin — treat
+// that exact pair as "unset" and fall back to the computed layout instead.
+function hasManualOverride(node) {
+  if (node.manual_x === null || node.manual_y === null) return false
+  if (node.manual_x === 0 && node.manual_y === 0) return false
+  return true
 }
 
 // Centre of the (column, lane) cell. The flow axis carries the columns and starts
