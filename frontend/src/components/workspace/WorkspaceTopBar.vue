@@ -5,8 +5,9 @@
 // controls into (see MapWorkspace.vue's Teleport target `#topbar-status-slot`
 // — a parent can't inject a descendant's provided store, so this is how the
 // live map state reaches a bar that sits above the tree/tabs/inspector).
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, FeatherIcon } from 'frappe-ui'
+import { FeatherIcon } from 'frappe-ui'
 import MapBadge from '@/components/MapBadge.vue'
 import { crumbLabel } from '@/workspace/treeContext.js'
 
@@ -17,7 +18,7 @@ const props = defineProps({
 const emit = defineEmits(['home', 'crumb-click'])
 
 const router = useRouter()
-const mapCrumb = () => props.crumbs.find((c) => c.level === 'map')
+const mapCrumb = computed(() => props.crumbs.find((c) => c.level === 'map'))
 </script>
 
 <template>
@@ -49,7 +50,7 @@ const mapCrumb = () => props.crumbs.find((c) => c.level === 'map')
       </button>
     </template>
 
-    <MapBadge v-if="mapCrumb()" :map-type="mapCrumb().node.map_type" />
+    <MapBadge v-if="mapCrumb" :map-type="mapCrumb.node.map_type" />
 
     <div id="topbar-status-slot" class="ml-auto flex shrink-0 items-center gap-3"></div>
   </header>
