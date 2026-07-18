@@ -50,18 +50,30 @@ function onInput(next) {
 </script>
 
 <template>
-  <!-- node-type: color dot + selector (D6) -->
-  <div v-if="column.dot" class="flex items-center gap-2">
-    <span class="h-2 w-2 flex-shrink-0 rounded-full" :class="dotClass" aria-hidden="true" />
-    <Combobox
-      class="min-w-0 flex-1"
-      size="sm"
-      :options="options"
-      :modelValue="value"
-      :placeholder="`Select ${column.label}`"
-      @update:modelValue="onInput"
-    />
-  </div>
+  <!-- node-type: color dot + selector (D6). The dot renders through the
+       Combobox's own #prefix slot rather than as a flex sibling — a bare
+       sibling span sits next to Combobox's root, which fully collapses to
+       nested `display: contents` wrappers (LabelingWrapper's bare slot,
+       ComboboxRoot) when no label is passed. That doubly-flattened tree
+       causes the real trigger box's hit-test region to bleed left over the
+       dot's own box despite both elements' getBoundingClientRect() reporting
+       non-overlapping rects (verified live: clicking the dot's own reported
+       coordinates focused the Combobox input, confirmed via
+       document.elementsFromPoint returning the input ahead of the span at
+       that point). Mounting the dot via #prefix makes it a genuine DOM child
+       of the trigger's real box — no adjacent-box hit-testing possible. -->
+  <Combobox
+    v-if="column.dot"
+    size="sm"
+    :options="options"
+    :modelValue="value"
+    :placeholder="`Select ${column.label}`"
+    @update:modelValue="onInput"
+  >
+    <template #prefix>
+      <span class="h-2 w-2 flex-shrink-0 rounded-full" :class="dotClass" aria-hidden="true" />
+    </template>
+  </Combobox>
 
   <!-- free-text, Wrap mode: full text visible, rows genuinely grow -->
   <FormControl
