@@ -120,7 +120,7 @@ Shared, presentation-only where possible; pages own state + mutations.
 - `src/components/workspace/` (added U2) — shell chrome for `ClientWorkspace.vue`:
   `WorkspaceTopBar.vue` (breadcrumb + badge + `#topbar-status-slot`) and
   `TreeRail.vue` (collapsible wrapper around `HierarchyTree`, forwards all its
-  events straight through via `v-on="$attrs"` since the page still owns every
+  events straight through via `v-bind="$attrs"` since the page still owns every
   mutation handler).
 
 ## Map editor mount point

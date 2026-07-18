@@ -4,7 +4,7 @@
 // so the canvas can get more room, plus the rail-level "New Process" action
 // that used to live in ClientWorkspace's page header. Presentation + collapse
 // state only — selection/mutation handling stays owned by the shell page,
-// forwarded straight through via `v-on="$attrs"` (all-listeners passthrough).
+// forwarded straight through via `v-bind="$attrs"` (all-listeners passthrough).
 import { FeatherIcon, Button } from 'frappe-ui'
 import HierarchyTree from '@/components/HierarchyTree.vue'
 
@@ -50,7 +50,7 @@ defineOptions({ inheritAttrs: false })
         :processes="processes"
         :selected-name="selectedName"
         :auto-expand="autoExpand"
-        v-on="$attrs"
+        v-bind="$attrs"
       />
     </div>
   </aside>
