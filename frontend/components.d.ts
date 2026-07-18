@@ -30,5 +30,7 @@ declare module 'vue' {
     StepRow: typeof import('./src/components/editor/StepRow.vue')['default']
     SubProcessDialog: typeof import('./src/components/SubProcessDialog.vue')['default']
     TableTab: typeof import('./src/components/editor/TableTab.vue')['default']
+    WizardStepPanel: typeof import('./src/components/editor/WizardStepPanel.vue')['default']
+    WizardTab: typeof import('./src/components/editor/WizardTab.vue')['default']
   }
 }
