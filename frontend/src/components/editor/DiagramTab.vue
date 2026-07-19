@@ -22,6 +22,7 @@ import { doctypes } from '@/data/erpnext.js'
 import { nodeTypeColor } from '@/diagram/nodeColors.js'
 import { severityChip, maxSeverity } from '@/ui/chipColors.js'
 import { nodeIndicators } from '@/diagram/nodeIndicators.js'
+import { laneTint } from '@/diagram/laneColors.js'
 import RisksStrip from './RisksStrip.vue'
 
 const store = useMapStore()
@@ -401,19 +402,22 @@ function labelStrip(lane) {
           </marker>
         </defs>
 
-        <!-- lane bands -->
+        <!-- lane bands (BACKLOG 4.1): a rotating soft-tint palette per lane —
+             a different color axis than node-type — instead of the old flat
+             alternating gray, so a map with several lanes is easier to scan
+             at a glance. -->
         <g v-for="lane in diagram.lanes" :key="`lane-${lane.index}`">
           <rect
             v-bind="bandRect(lane)"
-            :fill="lane.index % 2 === 0 ? '#f8fafc' : '#f1f5f9'"
-            stroke="#e2e8f0"
+            :fill="laneTint(lane.index).fill"
+            :stroke="laneTint(lane.index).stroke"
             stroke-width="1"
           />
           <!-- label header strip at the flow start -->
           <rect
             v-bind="labelStrip(lane)"
-            fill="#e2e8f0"
-            stroke="#cbd5e1"
+            :fill="laneTint(lane.index).label"
+            :stroke="laneTint(lane.index).stroke"
             stroke-width="1"
           />
           <text
