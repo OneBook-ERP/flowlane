@@ -4,7 +4,7 @@
 // delete column. All state lives in the shared store (useMapStore); this tab only
 // orchestrates the grid, the paste dialog, and the per-row connection editor.
 import { ref, computed, onMounted } from 'vue'
-import { Button, FeatherIcon } from 'frappe-ui'
+import { Button, FeatherIcon, toast } from 'frappe-ui'
 import {
   COLUMNS,
   INDEX_COL_WIDTH,
@@ -21,6 +21,8 @@ import PainPointDialog from './PainPointDialog.vue'
 import { useMapStore } from '@/stores/useMapStore.js'
 import { doctypes } from '@/data/erpnext.js'
 import { uiPrefs } from '@/ui/uiPrefs.js'
+import { downloadStepsAsXlsx, readStepsFromXlsxFile } from '@/map/excelFile.js'
+import { xlsxFilename } from '@/map/excelIO.js'
 
 const store = useMapStore()
 const columns = COLUMNS
@@ -30,6 +32,8 @@ const headerY = computed(() => (uiPrefs.density === 'relaxed' ? 'py-3' : 'py-2')
 const pasteOpen = ref(false)
 const connection = ref({ open: false, uid: '' })
 const pain = ref({ open: false, uid: '' })
+const uploadInput = ref(null)
+const uploading = ref(false)
 
 const steps = computed(() => store.state.steps)
 const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
@@ -53,6 +57,39 @@ function openConnections(uid) {
 function openPainPoints(uid) {
   pain.value = { open: true, uid }
 }
+
+// T3.2 — real Excel export: all 15 Map Step fields, fully client-side (no
+// backend round-trip).
+function downloadExcel() {
+  downloadStepsAsXlsx(steps.value, xlsxFilename(store.state.header.map_title))
+  toast.success('Downloaded as Excel.')
+}
+
+function triggerUpload() {
+  uploadInput.value?.click()
+}
+
+// T3.3 — real Excel import: parsed client-side via SheetJS (excelFile.js), then
+// fed through the SAME store.addRows the clipboard-paste importer uses.
+async function handleUpload(event) {
+  const file = event.target.files?.[0]
+  event.target.value = '' // allow re-selecting the same file next time
+  if (!file) return
+  uploading.value = true
+  try {
+    const rows = await readStepsFromXlsxFile(file)
+    if (!rows.length) {
+      toast.error('No rows found in that file.')
+      return
+    }
+    store.addRows(rows)
+    toast.success(`Added ${rows.length} row${rows.length === 1 ? '' : 's'} from Excel.`)
+  } catch (error) {
+    toast.error('Could not read that Excel file.')
+  } finally {
+    uploading.value = false
+  }
+}
 </script>
 
 <template>
@@ -67,6 +104,21 @@ function openPainPoints(uid) {
         <template #prefix><FeatherIcon name="clipboard" class="h-4 w-4" /></template>
         Paste from Excel
       </Button>
+      <Button variant="subtle" :loading="uploading" @click="triggerUpload">
+        <template #prefix><FeatherIcon name="upload" class="h-4 w-4" /></template>
+        Upload Excel
+      </Button>
+      <Button variant="subtle" @click="downloadExcel">
+        <template #prefix><FeatherIcon name="download" class="h-4 w-4" /></template>
+        Download as Excel
+      </Button>
+      <input
+        ref="uploadInput"
+        type="file"
+        accept=".xlsx,.xls"
+        class="hidden"
+        @change="handleUpload"
+      />
       <div class="ml-auto flex items-center gap-2 text-xs text-ink-gray-5">
         <span v-if="store.state.error" class="text-ink-red-3">{{ store.state.error }}</span>
         <span>{{ saveLabel }}</span>
