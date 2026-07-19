@@ -50,7 +50,26 @@ def get_map(map: str) -> dict:
 		["name", "map_title", "map_type", "direction", "status", "version_label", "sub_process"],
 		as_dict=True,
 	)
+	header.update(_map_context(header.sub_process))
 	return {"map": header, "steps": _load_steps(map)}
+
+
+def _map_context(sub_process: str) -> dict:
+	"""Client / process / sub-process display names for the Diagram header
+	(BACKLOG 4.2) — a read-only ancestry lookup alongside the map's own
+	fields, same join `get_map_location` (tree.py) already does for the
+	deep-link resolver, just returning titles instead of names."""
+	sub_title = frappe.db.get_value("Flowlane Sub Process", sub_process, "title")
+	parent_process = frappe.db.get_value("Flowlane Sub Process", sub_process, "parent_process")
+	process_name, client = frappe.db.get_value(
+		"Flowlane Process", parent_process, ["process_name", "client"]
+	)
+	client_name = frappe.db.get_value("Flowlane Client", client, "client_name")
+	return {
+		"sub_process_title": sub_title,
+		"process_name": process_name,
+		"client_name": client_name,
+	}
 
 
 @frappe.whitelist()

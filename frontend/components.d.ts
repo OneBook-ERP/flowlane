@@ -16,6 +16,8 @@ declare module 'vue' {
     ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
     ConnectionEditorDialog: typeof import('./src/components/editor/ConnectionEditorDialog.vue')['default']
     ConnectionsList: typeof import('./src/components/editor/ConnectionsList.vue')['default']
+    DiagramFooter: typeof import('./src/components/editor/DiagramFooter.vue')['default']
+    DiagramHeader: typeof import('./src/components/editor/DiagramHeader.vue')['default']
     DiagramTab: typeof import('./src/components/editor/DiagramTab.vue')['default']
     ExportMenu: typeof import('./src/components/editor/ExportMenu.vue')['default']
     GridCell: typeof import('./src/components/editor/GridCell.vue')['default']
