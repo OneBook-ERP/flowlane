@@ -8,6 +8,7 @@
  "field_order": [
   "client_name",
   "industry_vertical",
+  "mapping_deadline",
   "status",
   "primary_contact_name",
   "primary_contact_email",
@@ -29,6 +30,11 @@
    "in_list_view": 1,
    "label": "Industry Vertical",
    "options": "Flowlane Industry Vertical"
+  },
+  {
+   "fieldname": "mapping_deadline",
+   "fieldtype": "Date",
+   "label": "Mapping Deadline"
   },
   {
    "default": "Active",
