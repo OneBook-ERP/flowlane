@@ -56,16 +56,41 @@ async function setStatus(value) {
     class="flex shrink-0 flex-col border-l border-outline-gray-1 bg-surface-white"
     :class="collapsed ? 'w-9' : selectedStep ? 'w-80' : 'w-64'"
   >
-    <div class="flex items-center gap-2 border-b border-outline-gray-1 px-2 py-2">
-      <FeatherIcon :name="selectedStep ? 'git-branch' : 'sliders'" class="h-4 w-4 shrink-0 text-ink-gray-5" />
+    <div
+      class="flex items-center gap-2 border-b border-outline-gray-1 px-2 py-2"
+      :class="collapsed ? 'justify-center' : ''"
+    >
+      <!-- Collapsed state drops the leading type icon so only the toggle
+           button remains — see the button's own comment for why keeping
+           both was the root cause of the "no way to expand back" bug. -->
+      <FeatherIcon
+        v-if="!collapsed"
+        :name="selectedStep ? 'git-branch' : 'sliders'"
+        class="h-4 w-4 shrink-0 text-ink-gray-5"
+      />
       <span v-if="!collapsed" class="flex-1 truncate text-xs font-medium uppercase tracking-wide text-ink-gray-5">
         {{ selectedStep ? 'Step' : 'Inspector' }}
       </span>
       <button
-        class="ml-auto rounded p-0.5 text-ink-gray-5 hover:bg-surface-gray-2"
+        class="rounded p-0.5 text-ink-gray-5 hover:bg-surface-gray-2"
+        :class="collapsed ? '' : 'ml-auto'"
         :title="collapsed ? 'Expand inspector' : 'Collapse inspector'"
         @click="emit('update:collapsed', !collapsed)"
       >
+        <!-- Root cause (bug 2.3): collapsed width is `w-9` (36px). The old
+             markup always rendered icon + gap-2 + this button here, which
+             needs ~60px — fine for TreeRail (pinned to the LEFT edge, so
+             the overflow spills rightward into on-screen canvas space and
+             stays clickable/visible) but this Inspector is pinned to the
+             RIGHT edge, flush against the viewport boundary, so the same
+             overflow pushed the button past x=1440 (viewport width) —
+             confirmed live via Playwright bounding boxes (chevron icon
+             rendered at x:1439-1455 in a 1440px viewport, i.e. 15 of its
+             16px were off-screen with no scrollbar to reach it). Dropping
+             the leading icon when collapsed makes the button the ONLY
+             child (20px incl. padding, exactly filling the 36px strip
+             minus its own px-2 padding), so it never overflows regardless
+             of which edge the panel is pinned to. -->
         <FeatherIcon :name="collapsed ? 'chevron-left' : 'chevron-right'" class="h-4 w-4" />
       </button>
     </div>
