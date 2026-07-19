@@ -65,7 +65,7 @@ const connections = computed(() => step.value?.connections || [])
         @update:modelValue="store.setConnection(uid, index, { condition: $event })"
       />
       <Button variant="ghost" @click="store.removeConnection(uid, index)">
-        <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-3" /></template>
+        <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-9" /></template>
       </Button>
     </div>
 

@@ -61,7 +61,7 @@ const points = computed(() => props.step.pain_points || [])
           label="Remove pain point"
           @click="store.removePainPoint(step.uid, index)"
         >
-          <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-3" /></template>
+          <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-9" /></template>
         </Button>
       </div>
 

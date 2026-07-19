@@ -69,7 +69,10 @@ function triggerUpload() {
 }
 
 // T3.3 — real Excel import: parsed client-side via SheetJS (excelFile.js), then
-// fed through the SAME store.addRows the clipboard-paste importer uses.
+// upserted by step_id (store.importRows, BUG FIX — this used to call
+// store.addRows like the clipboard importer, which always appends; that
+// meant downloading a map, editing it in Excel, and re-uploading duplicated
+// every row instead of updating it). New step_ids still append as new rows.
 async function handleUpload(event) {
   const file = event.target.files?.[0]
   event.target.value = '' // allow re-selecting the same file next time
@@ -81,8 +84,15 @@ async function handleUpload(event) {
       toast.error('No rows found in that file.')
       return
     }
-    store.addRows(rows)
-    toast.success(`Added ${rows.length} row${rows.length === 1 ? '' : 's'} from Excel.`)
+    const { added, updated } = store.importRows(rows)
+    toast.success(
+      [
+        added ? `${added} new row${added === 1 ? '' : 's'}` : '',
+        updated ? `${updated} updated` : '',
+      ]
+        .filter(Boolean)
+        .join(', ') + ' from Excel.'
+    )
   } catch (error) {
     toast.error('Could not read that Excel file.')
   } finally {
@@ -101,7 +111,7 @@ async function handleUpload(event) {
       </Button>
       <Button variant="subtle" @click="pasteOpen = true">
         <template #prefix><FeatherIcon name="clipboard" class="h-4 w-4" /></template>
-        Paste from Excel
+        Paste from AI
       </Button>
       <Button variant="subtle" :loading="uploading" @click="triggerUpload">
         <template #prefix><FeatherIcon name="upload" class="h-4 w-4" /></template>

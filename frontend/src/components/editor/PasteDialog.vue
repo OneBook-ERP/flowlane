@@ -55,7 +55,7 @@ async function copyAiPrompt() {
 <template>
   <Dialog
     :modelValue="modelValue"
-    :options="{ title: 'Paste from Excel', size: 'xl' }"
+    :options="{ title: 'Paste from AI', size: 'xl' }"
     @update:modelValue="emit('update:modelValue', $event)"
   >
     <template #body-content>

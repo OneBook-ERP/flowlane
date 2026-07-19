@@ -106,7 +106,7 @@ const pinnedCell = 'sticky z-10 bg-surface-white group-hover:bg-surface-gray-1'
     <td class="sticky right-0 z-10 bg-surface-white px-2 align-middle group-hover:bg-surface-gray-1" :class="cellY">
       <Tooltip text="Delete step">
         <Button variant="ghost" size="sm" @click="store.removeStep(step.uid)">
-          <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-3" /></template>
+          <template #icon><FeatherIcon name="trash-2" class="h-4 w-4 text-ink-red-9" /></template>
         </Button>
       </Tooltip>
     </td>

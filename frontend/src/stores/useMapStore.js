@@ -8,6 +8,7 @@
 import { reactive, provide, inject } from 'vue'
 import { call } from 'frappe-ui'
 import { blankStep, fromServerStep, toSavePayload, mergeUidMap } from '@/map/steps.js'
+import { upsertStepsFromImport } from '@/map/excelImport.js'
 import { moveItem } from '@/data/reorder.js'
 import { serverMessage } from '@/data/errors.js'
 
@@ -124,6 +125,16 @@ export function createMapStore(mapName) {
     scheduleSave()
   }
 
+  // Upload Excel (BUG FIX, distinct from addRows/Paste-from-AI): rows match
+  // back onto existing steps by step_id instead of always appending, so
+  // re-uploading a file you just downloaded and edited updates it in place
+  // rather than duplicating every row. See map/excelImport.js.
+  function importRows(fieldMaps) {
+    const result = upsertStepsFromImport(state.steps, fieldMaps)
+    scheduleSave()
+    return result
+  }
+
   function removeStep(uid) {
     const index = state.steps.findIndex((step) => step.uid === uid)
     if (index === -1) return
@@ -225,6 +236,7 @@ export function createMapStore(mapName) {
     setDirection,
     addStep,
     addRows,
+    importRows,
     removeStep,
     moveStep,
     moveStepBy,
