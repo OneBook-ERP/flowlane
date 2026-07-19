@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('frappe-ui', () => ({ call: vi.fn().mockResolvedValue({ uid_map: {} }) }))
 
+const { call } = await import('frappe-ui')
 const { createMapStore } = await import('./useMapStore.js')
 
 describe('createMapStore — single source of truth across mount points', () => {
@@ -52,5 +53,34 @@ describe('createMapStore — single source of truth across mount points', () => 
     // The same row object is what any StepInspector instance would receive as
     // its `step` prop (store.findStep(uid) / state.steps element) — not a copy.
     expect(store.state.steps.find((s) => s.uid === from.uid)).toBe(row)
+  })
+})
+
+describe('importRows — Upload Excel / Paste from AI (BUG FIX)', () => {
+  it('awaits the real save instead of a debounced one, and resolves with added/updated counts', async () => {
+    const store = createMapStore('Test Map')
+    const result = await store.importRows([{ step_id: 'S1', step_name: 'Receive' }])
+    expect(result).toEqual({ added: 1, updated: 0 })
+    expect(store.state.dirty).toBe(false) // the awaited save already completed
+  })
+
+  it('propagates a save failure (e.g. an invalid master value) instead of a silent, later drop', async () => {
+    call.mockRejectedValueOnce({ messages: ['Could not find Lane Role: Store Keeper'] })
+    const store = createMapStore('Test Map')
+    await expect(
+      store.importRows([{ step_id: 'S1', lane_role: 'Store Keeper' }])
+    ).rejects.toBeTruthy()
+    expect(store.state.error).toBe('Could not find Lane Role: Store Keeper')
+  })
+
+  it('resolves the target uid for a connection to another row imported in the same batch', async () => {
+    const store = createMapStore('Test Map')
+    await store.importRows([
+      { step_id: 'S1', connections: [{ to_step_id: 'S2', label: 'Yes', condition: '' }] },
+      { step_id: 'S2' },
+    ])
+    const from = store.findStep(store.state.steps.find((s) => s.step_id === 'S1').uid)
+    const to = store.state.steps.find((s) => s.step_id === 'S2')
+    expect(from.connections).toEqual([{ to_uid: to.uid, label: 'Yes', condition: '' }])
   })
 })

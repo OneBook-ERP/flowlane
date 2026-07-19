@@ -9,18 +9,17 @@
 // entirely, so downloading a map, editing it, and re-uploading silently lost
 // every connection and pain point). Both are child-table data, not a single
 // scalar cell, so they round-trip through a small delimited text format in
-// one cell each (see encodeConnections/encodePainPoints below) — good enough
-// for a consultant to read and hand-edit in Excel, not a bulletproof
-// serialization. Import-side upsert (matching rows back onto existing steps
-// instead of always appending) lives in map/excelImport.js, since it needs
-// the live store's steps, not just row<->field conversion.
+// one cell each — see map/childRowFormat.js, shared with pasteParser.js's
+// Paste-from-AI import so the two paths accept the identical column format.
+// Import-side upsert (matching rows back onto existing steps instead of
+// always appending) lives in map/excelImport.js, since it needs the live
+// store's steps, not just row<->field conversion.
 
 import { COLUMNS } from '@/components/editor/columns.js'
+import { encodeConnections, decodeConnections, encodePainPoints, decodePainPoints } from './childRowFormat.js'
 
 const CONNECTIONS_LABEL = 'Connections'
 const PAIN_POINTS_LABEL = 'Pain Points'
-const ITEM_SEP = ' | '
-const SEVERITIES = ['Low', 'Medium', 'High']
 
 // [header row, ...data rows] as arrays, ready for XLSX.utils.aoa_to_sheet.
 export function stepsToSheetRows(steps) {
@@ -36,7 +35,7 @@ export function stepsToSheetRows(steps) {
 
 // Inverse: array-of-arrays (first row = header) -> one { field: value } map per
 // non-blank row, the same shape parseClipboard() produces for Paste-from-AI,
-// ready for store.importRows/addRows. Header cells are matched to COLUMNS by
+// ready for store.importRows. Header cells are matched to COLUMNS by
 // label so a re-ordered or trimmed-down file (e.g. a consultant deleted a
 // column) still lands on the right field; a header cell that matches nothing
 // known falls back to its position so a plain, header-less AI-generated block
@@ -57,76 +56,6 @@ export function sheetRowsToFieldMaps(sheetRows) {
     if (painIndex !== -1) values.pain_points = decodePainPoints(row[painIndex])
     return values
   })
-}
-
-// One connection per token: "<target step_id> (Label) [Condition]" — Label and
-// Condition are omitted when blank. Multiple connections join with ITEM_SEP.
-// A connection whose target step has no step_id (shouldn't normally happen)
-// is dropped rather than exported as a blank, unresolvable reference.
-function encodeConnections(connections = [], stepIdByUid) {
-  return connections
-    .map((conn) => {
-      const target = stepIdByUid.get(conn.to_uid) || ''
-      if (!target) return ''
-      let text = target
-      if (conn.label) text += ` (${conn.label})`
-      if (conn.condition) text += ` [${conn.condition}]`
-      return text
-    })
-    .filter(Boolean)
-    .join(ITEM_SEP)
-}
-
-function decodeConnections(cell) {
-  const text = String(cell ?? '').trim()
-  if (!text) return []
-  return text
-    .split(ITEM_SEP)
-    .map((token) => token.trim())
-    .filter(Boolean)
-    .map((token) => {
-      const match = token.match(/^(\S+)(?:\s*\(([^)]*)\))?(?:\s*\[([^\]]*)\])?/)
-      if (!match) return null
-      return { to_step_id: match[1], label: (match[2] || '').trim(), condition: (match[3] || '').trim() }
-    })
-    .filter(Boolean)
-}
-
-// One pain point per token: "<Severity>: <description> (<Type>)" — Type is
-// omitted when blank, Severity defaults to Low if missing/unrecognised (same
-// default the Pain Point store mutator uses). Multiple points join with
-// ITEM_SEP. Points with no description are dropped (nothing to import).
-function encodePainPoints(points = []) {
-  return points
-    .filter((point) => point.description)
-    .map((point) => {
-      const severity = SEVERITIES.includes(point.severity) ? point.severity : 'Low'
-      let text = `${severity}: ${point.description}`
-      if (point.pain_type) text += ` (${point.pain_type})`
-      return text
-    })
-    .join(ITEM_SEP)
-}
-
-function decodePainPoints(cell) {
-  const text = String(cell ?? '').trim()
-  if (!text) return []
-  return text
-    .split(ITEM_SEP)
-    .map((token) => token.trim())
-    .filter(Boolean)
-    .map((token) => {
-      const match = token.match(/^(?:(low|medium|high)\s*:\s*)?(.*?)(?:\s*\(([^)]*)\))?$/i)
-      const severity = match?.[1] ? capitalize(match[1]) : 'Low'
-      const description = (match?.[2] ?? token).trim()
-      const pain_type = (match?.[3] || '').trim()
-      return { description, pain_type, severity }
-    })
-    .filter((point) => point.description)
-}
-
-function capitalize(word) {
-  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
 }
 
 // Download filename from a map title, e.g. "Order to Cash" -> "order-to-cash.xlsx".

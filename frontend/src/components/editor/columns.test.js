@@ -5,12 +5,13 @@ import {
   INDEX_COL_WIDTH,
   PASTE_FIELDS,
   columnsByGroup,
+  pasteFieldLabel,
   stickyLeftOffsets,
   tableMinWidth,
 } from './columns.js'
 
 describe('columns', () => {
-  it('keeps the six paste fields in positional order', () => {
+  it('keeps the eight paste fields in positional order, ending with connections/pain points', () => {
     expect(PASTE_FIELDS).toEqual([
       'step_id',
       'step_name',
@@ -18,7 +19,20 @@ describe('columns', () => {
       'node_type',
       'trigger_input',
       'output_result',
+      'connections',
+      'pain_points',
     ])
+  })
+
+  describe('pasteFieldLabel', () => {
+    it('uses the COLUMNS label for a real scalar field', () => {
+      expect(pasteFieldLabel('step_id')).toBe('Step ID')
+    })
+
+    it('has a readable label for the two synthetic child-table fields', () => {
+      expect(pasteFieldLabel('connections')).toBe('Connections')
+      expect(pasteFieldLabel('pain_points')).toBe('Pain Points')
+    })
   })
 
   it('exposes all 15 map-step fields', () => {

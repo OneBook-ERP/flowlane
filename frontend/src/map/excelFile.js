@@ -22,7 +22,7 @@ export function downloadStepsAsXlsx(steps, filename) {
 
 // Parse a File (from an <input type="file"> picker) into paste-pipeline field
 // maps — the same { field: value } shape parseClipboard() produces — so the
-// caller feeds the result through store.addRows exactly like a clipboard paste.
+// caller feeds the result through store.importRows, upserting by step_id.
 export async function readStepsFromXlsxFile(file) {
   const buffer = await file.arrayBuffer()
   const workbook = XLSX.read(buffer, { type: 'array' })

@@ -83,5 +83,18 @@ export function tableMinWidth(columns = COLUMNS) {
   return INDEX_COL_WIDTH + fields + trailing
 }
 
-// Excel paste maps its columns positionally onto these fields (first six columns).
-export const PASTE_FIELDS = COLUMNS.slice(0, 6).map((column) => column.field)
+// Excel/AI paste maps its columns positionally onto these fields: the first
+// six COLUMNS entries, plus Connections and Pain Points — child-table data
+// that isn't in COLUMNS at all (Table renders those two as their own
+// dedicated grid lanes, not a GridCell). `connections`/`pain_points` are
+// synthetic field names recognised by map/pasteParser.js's cellsToFields,
+// decoded via map/childRowFormat.js (the same format Excel import/export
+// uses) rather than kept as plain text.
+export const PASTE_FIELDS = [...COLUMNS.slice(0, 6).map((column) => column.field), 'connections', 'pain_points']
+
+// Display label for a PASTE_FIELDS entry — COLUMNS' own label for a real
+// scalar field, or this map for the two synthetic child-table fields.
+const PASTE_FIELD_LABELS = { connections: 'Connections', pain_points: 'Pain Points' }
+export function pasteFieldLabel(field) {
+  return COLUMNS.find((column) => column.field === field)?.label || PASTE_FIELD_LABELS[field] || field
+}

@@ -73,6 +73,10 @@ function triggerUpload() {
 // store.addRows like the clipboard importer, which always appends; that
 // meant downloading a map, editing it in Excel, and re-uploading duplicated
 // every row instead of updating it). New step_ids still append as new rows.
+// store.importRows awaits the real save (BUG FIX) so a master-validation
+// failure (an invalid Lane Role/Node Type cell) surfaces here as a real
+// error instead of a false "success" toast followed by a silent save
+// failure — see useMapStore.js's importRows for the full explanation.
 async function handleUpload(event) {
   const file = event.target.files?.[0]
   event.target.value = '' // allow re-selecting the same file next time
@@ -84,7 +88,7 @@ async function handleUpload(event) {
       toast.error('No rows found in that file.')
       return
     }
-    const { added, updated } = store.importRows(rows)
+    const { added, updated } = await store.importRows(rows)
     toast.success(
       [
         added ? `${added} new row${added === 1 ? '' : 's'}` : '',
@@ -94,7 +98,7 @@ async function handleUpload(event) {
         .join(', ') + ' from Excel.'
     )
   } catch (error) {
-    toast.error('Could not read that Excel file.')
+    toast.error(store.state.error || 'Could not read that Excel file.')
   } finally {
     uploading.value = false
   }

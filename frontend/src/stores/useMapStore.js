@@ -120,18 +120,27 @@ export function createMapStore(mapName) {
     return step
   }
 
-  function addRows(rowMaps) {
-    rowMaps.forEach((values) => state.steps.push(blankStep(values)))
-    scheduleSave()
-  }
-
-  // Upload Excel (BUG FIX, distinct from addRows/Paste-from-AI): rows match
-  // back onto existing steps by step_id instead of always appending, so
-  // re-uploading a file you just downloaded and edited updates it in place
-  // rather than duplicating every row. See map/excelImport.js.
-  function importRows(fieldMaps) {
+  // Bulk import (Upload Excel AND Paste from AI — BUG FIX, this used to be
+  // two paths: Excel called a since-removed store.addRows that unconditionally
+  // pushed a blankStep per row, and Paste from AI did the same; either one
+  // re-run over an already-imported block duplicated every row instead of
+  // updating it). Rows match back onto existing steps by step_id instead: a
+  // match updates fields/pain_points/connections in place, no match still
+  // appends. See map/excelImport.js.
+  //
+  // Awaits the IMMEDIATE save() rather than scheduling the usual debounced
+  // one (BUG FIX): every other mutator fires a toast the instant it edits
+  // local state, which is fine for a single field edit where a save failure
+  // is rare and visible in the next keystroke. A bulk import is the one path
+  // where free-typed/AI-generated text lands directly on master-validated
+  // fields (Lane Role, Node Type) with NO Combobox to catch a bad value
+  // first — so a batch with one bad value used to fail transactionally on
+  // the backend a full second later, by which point the caller's "N rows
+  // added" toast had already told the user it worked. Awaiting here lets
+  // the caller show the REAL outcome instead.
+  async function importRows(fieldMaps) {
     const result = upsertStepsFromImport(state.steps, fieldMaps)
-    scheduleSave()
+    await save()
     return result
   }
 
@@ -235,7 +244,6 @@ export function createMapStore(mapName) {
     scheduleSave,
     setDirection,
     addStep,
-    addRows,
     importRows,
     removeStep,
     moveStep,
