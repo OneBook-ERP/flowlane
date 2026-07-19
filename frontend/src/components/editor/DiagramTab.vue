@@ -300,8 +300,12 @@ function bandRect(lane) {
     : { x: 0, y: lane.pos, width: diagram.value.width, height: lane.size }
 }
 
-// Node-type fill wash: a LIGHT tint (low fill-opacity), not a saturated
-// block — restrained per ui-design ("color sparingly... small components").
+// Node-type fill wash: a tint, not a saturated block — restrained per
+// ui-design ("color sparingly... small components"). 0.16 (U5's original
+// value) read as washed-out/near-white on screen (0.1 CR); 0.32 keeps it a
+// wash — the border still carries the full-strength hue — while actually
+// being visible as a tint at a glance instead of needing to squint.
+const NODE_FILL_OPACITY = '0.32'
 function nodeFill(node) {
   return nodeHues.value[node.step_id] || nodeTypeColor('').hex
 }
@@ -462,7 +466,7 @@ function labelStrip(lane) {
               :rx="geo.rx"
               :ry="geo.ry"
               :fill="nodeFill(node)"
-              fill-opacity="0.16"
+              :fill-opacity="NODE_FILL_OPACITY"
               v-bind="nodeStroke(node)"
             />
             <polygon
@@ -470,7 +474,7 @@ function labelStrip(lane) {
               :key="`s-${node.step_id}`"
               :points="pointsAttr(geo.points)"
               :fill="nodeFill(node)"
-              fill-opacity="0.16"
+              :fill-opacity="NODE_FILL_OPACITY"
               v-bind="nodeStroke(node)"
             />
             <rect
@@ -482,7 +486,7 @@ function labelStrip(lane) {
               :height="geo.height"
               :rx="geo.rx"
               :fill="nodeFill(node)"
-              fill-opacity="0.16"
+              :fill-opacity="NODE_FILL_OPACITY"
               v-bind="nodeStroke(node)"
             />
           </template>
