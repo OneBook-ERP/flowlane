@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { findMapContext, findProcessForSub, breadcrumbTrail, crumbLabel } from './treeContext.js'
+import {
+  findMapContext,
+  findProcessForSub,
+  breadcrumbTrail,
+  crumbLabel,
+  allExpandableNames,
+} from './treeContext.js'
 
 function tree() {
   return [
@@ -91,5 +97,20 @@ describe('breadcrumbTrail', () => {
 
   it('returns an empty trail for a map not present in the tree', () => {
     expect(breadcrumbTrail(tree(), { mapName: 'MAP-404' })).toEqual([])
+  })
+})
+
+describe('allExpandableNames', () => {
+  it('collects every Process and Sub Process name, but not Map names', () => {
+    expect(allExpandableNames(tree())).toEqual(['PROC-1', 'SUB-1', 'SUB-2', 'PROC-2'])
+  })
+
+  it('returns an empty array for an empty/undefined tree', () => {
+    expect(allExpandableNames(undefined)).toEqual([])
+    expect(allExpandableNames([])).toEqual([])
+  })
+
+  it('handles a process with no sub-processes', () => {
+    expect(allExpandableNames([{ name: 'PROC-3', sub_processes: [] }])).toEqual(['PROC-3'])
   })
 })

@@ -11,12 +11,12 @@
 // (nothing in this app toggles a root dark class) — HierarchyTree itself
 // stays token-driven; this wrapper overlays a dark background + text color
 // that reads fine against it, matching the reference's dark nav rail (§3).
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { FeatherIcon, Button } from 'frappe-ui'
 import HierarchyTree from '@/components/HierarchyTree.vue'
 import { uiPrefs } from '@/ui/uiPrefs.js'
 
-defineProps({
+const props = defineProps({
   processes: { type: Array, default: () => [] },
   selectedName: { type: String, default: '' },
   autoExpand: { type: Array, default: () => [] },
@@ -27,6 +27,17 @@ const emit = defineEmits(['update:collapsed', 'new-process'])
 defineOptions({ inheritAttrs: false })
 
 const dark = computed(() => uiPrefs.treeTheme === 'dark')
+
+// Expand-all/collapse-all (2.2) — HierarchyTree owns the actual expanded-set
+// state (per-node, local); this rail just drives it via the templateRef +
+// defineExpose bridge (same pattern as MapTabs.vue's activeTab/selectedStep).
+const treeRef = ref(null)
+const hasNodes = computed(() => props.processes.length > 0)
+const allExpanded = computed(() => treeRef.value?.isAllExpanded ?? false)
+function toggleExpandAll() {
+  if (!treeRef.value) return
+  allExpanded.value ? treeRef.value.collapseAll() : treeRef.value.expandAll()
+}
 </script>
 
 <template>
@@ -55,6 +66,15 @@ const dark = computed(() => uiPrefs.treeTheme === 'dark')
         </template>
       </Button>
       <button
+        v-if="!collapsed && hasNodes"
+        class="rounded p-0.5 hover:bg-surface-gray-2"
+        :class="dark ? 'text-gray-400 hover:bg-gray-800' : 'text-ink-gray-5'"
+        :title="allExpanded ? 'Collapse all' : 'Expand all'"
+        @click="toggleExpandAll"
+      >
+        <FeatherIcon :name="allExpanded ? 'chevrons-up' : 'chevrons-down'" class="h-4 w-4" />
+      </button>
+      <button
         class="rounded p-0.5 hover:bg-surface-gray-2"
         :class="dark ? 'text-gray-400 hover:bg-gray-800' : 'text-ink-gray-5'"
         :title="collapsed ? 'Expand tree' : 'Collapse tree'"
@@ -70,6 +90,7 @@ const dark = computed(() => uiPrefs.treeTheme === 'dark')
       </p>
       <HierarchyTree
         v-else
+        ref="treeRef"
         :processes="processes"
         :selected-name="selectedName"
         :auto-expand="autoExpand"

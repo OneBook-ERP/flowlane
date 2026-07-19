@@ -9,6 +9,7 @@ import MapBadge from '@/components/MapBadge.vue'
 import StatusChip from '@/components/StatusChip.vue'
 import { statusChip } from '@/ui/chipColors.js'
 import { uiPrefs } from '@/ui/uiPrefs.js'
+import { allExpandableNames } from '@/workspace/treeContext.js'
 
 const props = defineProps({
   processes: { type: Array, default: () => [] },
@@ -53,6 +54,22 @@ function toggle(name) {
   expanded.value = next
 }
 const isOpen = (name) => expanded.value.has(name)
+
+// Expand-all/collapse-all (2.2) — exposed for TreeRail's toggle button, same
+// templateRef + defineExpose bridge MapTabs.vue uses for activeTab/selectedStep.
+// `isAllExpanded` is reactive (not a one-shot flag) so it stays correct even
+// after the user hand-toggles individual rows post "expand all".
+const allNames = computed(() => allExpandableNames(props.processes))
+const isAllExpanded = computed(
+  () => allNames.value.length > 0 && allNames.value.every((name) => expanded.value.has(name))
+)
+function expandAll() {
+  expanded.value = new Set(allNames.value)
+}
+function collapseAll() {
+  expanded.value = new Set()
+}
+defineExpose({ expandAll, collapseAll, isAllExpanded })
 
 function processMenu(process) {
   return [

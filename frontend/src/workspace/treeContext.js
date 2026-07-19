@@ -54,3 +54,18 @@ export function crumbLabel(crumb) {
   if (crumb.level === 'sub') return crumb.node.title
   return crumb.node.map_title
 }
+
+// Every node name that owns an expand/collapse toggle in HierarchyTree —
+// Process (L1) and Sub Process (L2) rows only; Map (L3) rows are leaves with
+// no toggle of their own. Used by TreeRail's expand-all/collapse-all button
+// (2.2) to build the full "everything open" set in one pass.
+export function allExpandableNames(processes) {
+  const names = []
+  for (const process of processes || []) {
+    names.push(process.name)
+    for (const sub of process.sub_processes || []) {
+      names.push(sub.name)
+    }
+  }
+  return names
+}
