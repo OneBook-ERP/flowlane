@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BusinessRequirementPreview: typeof import('./src/components/editor/BusinessRequirementPreview.vue')['default']
     ClientListRow: typeof import('./src/components/ClientListRow.vue')['default']
     ClientSummary: typeof import('./src/components/workspace/ClientSummary.vue')['default']
     ClientTile: typeof import('./src/components/ClientTile.vue')['default']
