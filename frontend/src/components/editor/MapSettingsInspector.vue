@@ -28,7 +28,6 @@ const emit = defineEmits(['update:collapsed', 'clear-selected-step'])
 
 const savingStatus = ref(false)
 const header = computed(() => props.store.state.header || {})
-const isAsIs = computed(() => header.value.map_type === 'As-Is')
 
 const directionOptions = ['Top-to-Bottom', 'Left-to-Right'].map((v) => ({ label: v, value: v }))
 const statusOptions = ['Draft', 'In Review', 'Approved'].map((v) => ({ label: v, value: v }))
@@ -104,7 +103,7 @@ async function setStatus(value) {
           <FeatherIcon name="arrow-left" class="h-3.5 w-3.5" />
           Back to Map Settings
         </button>
-        <StepInspector :step="selectedStep" :is-as-is="isAsIs" />
+        <StepInspector :step="selectedStep" />
       </template>
 
       <template v-else>

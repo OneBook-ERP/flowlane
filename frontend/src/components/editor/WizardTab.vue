@@ -24,9 +24,6 @@ const currentIndex = computed(() =>
 )
 const currentStep = computed(() => steps.value[currentIndex.value] || null)
 const isDecision = computed(() => isDecisionType(currentStep.value?.node_type))
-// Pain points are an As-Is concern (PLAN F17); only surface the editor there so a
-// To-Be map is not cluttered with As-Is issues.
-const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
@@ -160,7 +157,7 @@ function addBranch() {
              space lands below the footer instead (a normal, un-alarming
              pattern — unlike floating actions with a gap above them). -->
         <div class="px-6 py-4">
-          <StepInspector :step="currentStep" :is-as-is="isAsIs" />
+          <StepInspector :step="currentStep" />
         </div>
 
         <!-- navigation + add actions -->

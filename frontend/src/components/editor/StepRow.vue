@@ -23,8 +23,6 @@ const columns = COLUMNS
 const offsets = stickyLeftOffsets()
 const connectionCount = computed(() => props.step.connections.length)
 const painCount = computed(() => (props.step.pain_points || []).length)
-// Pain points are an As-Is concern; hide the column's control on To-Be maps.
-const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 // Tweak panel Density (D1, §5): compact rows (~36px, B1) vs a roomier row for
 // side-by-side comparison. Only the vertical padding changes — column widths
@@ -89,9 +87,9 @@ const pinnedCell = 'sticky z-10 bg-surface-white group-hover:bg-surface-gray-1'
       </Tooltip>
     </td>
 
-    <!-- pain points (As-Is only) -->
-    <td v-if="isAsIs" class="px-2 align-middle" :class="cellY">
-      <Tooltip text="Record As-Is pain points">
+    <!-- pain points (BACKLOG 2.5: available on both As-Is and To-Be maps) -->
+    <td class="px-2 align-middle" :class="cellY">
+      <Tooltip text="Record pain points">
         <Button
           variant="subtle"
           size="sm"

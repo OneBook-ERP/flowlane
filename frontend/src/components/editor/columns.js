@@ -74,9 +74,12 @@ export function stickyLeftOffsets(columns = COLUMNS, indexWidth = INDEX_COL_WIDT
 }
 
 // Total intrinsic grid width so the table can overflow and scroll horizontally.
-export function tableMinWidth(columns = COLUMNS, { isAsIs = false } = {}) {
+// Pain column is always counted (BACKLOG 2.5 lifted the old As-Is-only gate —
+// pain points are captured on both map types now, so the Table grid always
+// reserves the lane rather than resizing per map type).
+export function tableMinWidth(columns = COLUMNS) {
   const fields = columns.reduce((sum, column) => sum + column.min, 0)
-  const trailing = CONNECTIONS_COL_WIDTH + (isAsIs ? PAIN_COL_WIDTH : 0) + DELETE_COL_WIDTH
+  const trailing = CONNECTIONS_COL_WIDTH + PAIN_COL_WIDTH + DELETE_COL_WIDTH
   return INDEX_COL_WIDTH + fields + trailing
 }
 

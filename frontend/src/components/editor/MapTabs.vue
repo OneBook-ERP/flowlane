@@ -1,16 +1,19 @@
 <script setup>
 // Map editor tab bar (S6). Phase 2 delivers the Table tab, Phase 3 the Diagram tab,
-// and Phase 4 the Wizard tab. All three are views over one shared store (created in
-// the workspace shell) — edits in any tab flow to the others through it.
+// and Phase 4 the Wizard tab; B6 adds the 4th "Pain Points & Business Requirement"
+// tab (BACKLOG 2.5). All four are views over one shared store (created in the
+// workspace shell) — edits in any tab flow to the others through it.
 import { ref, computed } from 'vue'
 import TableTab from './TableTab.vue'
 import DiagramTab from './DiagramTab.vue'
 import WizardTab from './WizardTab.vue'
+import PainPointsTab from './PainPointsTab.vue'
 
 const tabs = [
   { key: 'table', label: 'Table' },
   { key: 'diagram', label: 'Diagram' },
   { key: 'wizard', label: 'Wizard' },
+  { key: 'pain', label: 'Pain Points & Business Requirement' },
 ]
 const active = ref('table')
 const diagramRef = ref(null)
@@ -59,6 +62,7 @@ defineExpose({
       <TableTab v-if="active === 'table'" />
       <DiagramTab v-else-if="active === 'diagram'" ref="diagramRef" />
       <WizardTab v-else-if="active === 'wizard'" />
+      <PainPointsTab v-else-if="active === 'pain'" />
     </div>
   </div>
 </template>

@@ -1,9 +1,10 @@
 <script setup>
-// "Risks" strip (UI-REVAMP §4): a compact, worst-first list of an As-Is
-// map's pain points under the diagram, so bottlenecks are visible without
-// opening the Inspector. Reads the already-loaded store steps — no new API
-// call — via the pure collectRisks() helper; severity coloring comes from
-// the same chipColors.js every other severity chip in the app uses.
+// "Risks" strip (UI-REVAMP §4): a compact, worst-first list of the map's
+// pain points under the diagram (both As-Is and To-Be, BACKLOG 2.5), so
+// bottlenecks are visible without opening the Inspector. Reads the
+// already-loaded store steps — no new API call — via the pure
+// collectRisks() helper; severity coloring comes from the same
+// chipColors.js every other severity chip in the app uses.
 // Clicking a row selects that node the same way clicking it on the canvas
 // does (DiagramTab owns the actual selection state).
 import { computed } from 'vue'

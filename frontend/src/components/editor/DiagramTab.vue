@@ -51,10 +51,9 @@ const direction = computed(() =>
   store.state.header.direction === 'Left-to-Right' ? 'LR' : 'TB'
 )
 const hasSteps = computed(() => store.state.steps.length > 0)
-const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 
 // Pain-point count + worst severity per node (keyed by the engine step_id ==
-// row uid) so the diagram can flag As-Is issues without touching the pure
+// row uid) so the diagram can flag pain points without touching the pure
 // engine's contract. Severity drives the badge color (UI-REVAMP §3/§4) via
 // the same chipColors.js every other severity chip in the app reads.
 const painCounts = computed(() => {
@@ -560,8 +559,8 @@ function labelStrip(lane) {
             >
               {{ node.label }}
             </text>
-            <!-- pain-point badge: As-Is issues flagged on the node (T5.2/T5.3,
-                 UI-REVAMP §4). Color is the WORST severity among that node's
+            <!-- pain-point badge: issues flagged on the node (T5.2/T5.3,
+                 UI-REVAMP §4; both map types, BACKLOG 2.5). Color is the WORST severity among that node's
                  pain points, from the same chipColors.js the Risks strip and
                  PainPointEditor use — a red badge always means at least one
                  High-severity issue, not just "issues exist". -->
@@ -623,9 +622,10 @@ function labelStrip(lane) {
       </div>
     </div>
 
-    <!-- Risks strip (UI-REVAMP §4): As-Is only, reads the already-loaded
-         store steps, no new fetch. Selecting a row opens that node in the
-         same shared Inspector a canvas click would. -->
-    <RisksStrip v-if="isAsIs" :steps="store.state.steps" @select="selectedUid = $event" />
+    <!-- Risks strip (UI-REVAMP §4; BACKLOG 2.5 lifted the old As-Is-only
+         gate, both map types now show it): reads the already-loaded store
+         steps, no new fetch. Selecting a row opens that node in the same
+         shared Inspector a canvas click would. -->
+    <RisksStrip :steps="store.state.steps" @select="selectedUid = $event" />
   </div>
 </template>

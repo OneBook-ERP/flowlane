@@ -36,10 +36,9 @@ const uploadInput = ref(null)
 const uploading = ref(false)
 
 const steps = computed(() => store.state.steps)
-const isAsIs = computed(() => store.state.header.map_type === 'As-Is')
 // Fixed total width so the grid overflows and scrolls horizontally as a whole,
 // rather than squeezing every column (UI-REVAMP B1).
-const gridWidth = computed(() => tableMinWidth(columns, { isAsIs: isAsIs.value }))
+const gridWidth = computed(() => tableMinWidth(columns))
 const saveLabel = computed(() => {
   if (store.state.saving) return 'Saving…'
   if (store.state.dirty) return 'Unsaved changes'
@@ -147,7 +146,7 @@ async function handleUpload(event) {
           <col :style="{ width: INDEX_COL_WIDTH + 'px' }" />
           <col v-for="column in columns" :key="column.field" :style="{ width: column.min + 'px' }" />
           <col :style="{ width: CONNECTIONS_COL_WIDTH + 'px' }" />
-          <col v-if="isAsIs" :style="{ width: PAIN_COL_WIDTH + 'px' }" />
+          <col :style="{ width: PAIN_COL_WIDTH + 'px' }" />
           <col :style="{ width: DELETE_COL_WIDTH + 'px' }" />
         </colgroup>
         <thead class="sticky top-0 z-20 bg-surface-gray-2 text-left text-xs font-medium text-ink-gray-6">
@@ -163,7 +162,7 @@ async function handleUpload(event) {
               {{ column.label }}
             </th>
             <th class="px-2 font-medium" :class="headerY">Connections</th>
-            <th v-if="isAsIs" class="px-2 font-medium" :class="headerY">Pain</th>
+            <th class="px-2 font-medium" :class="headerY">Pain</th>
             <th class="sticky right-0 z-30 bg-surface-gray-2 px-2" :class="headerY"></th>
           </tr>
         </thead>

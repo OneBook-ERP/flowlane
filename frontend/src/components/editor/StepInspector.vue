@@ -1,7 +1,7 @@
 <script setup>
 // The shared, tabbed step inspector (UI-REVAMP D4/D5, UI step U3). Groups the
 // 15 Map Step attributes into General / Input-Output / Logic & Rules / ERPNext
-// Setup tabs, plus Connections (and Pain Points on As-Is maps) — replacing the
+// Setup tabs, plus Connections and Pain Points — replacing the
 // Wizard's old flat 15-field wall AND the Diagram's old read-only node panel
 // with ONE component. Every field editor is the Table's own GridCell, and
 // Connections/Pain Points reuse ConnectionsList/PainPointEditor, so writes from
@@ -20,7 +20,6 @@ import { uiPrefs } from '@/ui/uiPrefs.js'
 
 const props = defineProps({
   step: { type: Object, required: true },
-  isAsIs: { type: Boolean, default: false },
 })
 
 // Static: the field->tab grouping never depends on props, so compute it once.
@@ -31,9 +30,7 @@ const tabs = computed(() => {
   const connectionCount = (props.step.connections || []).length
   const painCount = (props.step.pain_points || []).length
   fieldTabs.push({ key: 'connections', label: 'Connections', kind: 'connections', count: connectionCount })
-  if (props.isAsIs) {
-    fieldTabs.push({ key: 'pain', label: 'Pain Points', kind: 'pain', count: painCount })
-  }
+  fieldTabs.push({ key: 'pain', label: 'Pain Points', kind: 'pain', count: painCount })
   return fieldTabs
 })
 
@@ -49,12 +46,6 @@ watch(
     activeKey.value = FIELD_GROUPS[0].group
   }
 )
-
-// A pain-map that goes back to To-Be mid-session shouldn't strand the user on
-// a tab that just disappeared.
-watch(tabs, (list) => {
-  if (!list.some((t) => t.key === activeKey.value)) activeKey.value = list[0].key
-})
 
 const dotClass = computed(() => nodeTypeColor(props.step.node_type).dot)
 

@@ -42,11 +42,10 @@ describe('columns', () => {
   })
 
   describe('tableMinWidth', () => {
-    it('sums index + fields + trailing lanes and is wide enough to scroll', () => {
+    it('sums index + fields + connections + pain + delete lanes', () => {
       const fields = COLUMNS.reduce((sum, c) => sum + c.min, 0)
-      expect(tableMinWidth()).toBe(INDEX_COL_WIDTH + fields + 104 + 48)
-      // As-Is adds the pain-point lane, widening the grid.
-      expect(tableMinWidth(COLUMNS, { isAsIs: true })).toBeGreaterThan(tableMinWidth())
+      // Pain lane is always counted (BACKLOG 2.5: no more As-Is-only gate).
+      expect(tableMinWidth()).toBe(INDEX_COL_WIDTH + fields + 104 + 88 + 48)
     })
   })
 

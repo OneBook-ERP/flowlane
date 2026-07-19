@@ -3,8 +3,9 @@
 // `pain_points` child rows — description (required), pain type (Link → Flowlane
 // Pain Point Type, from masters), severity (Low/Medium/High). All writes go
 // through the store mutators, which schedule the same debounced autosave as every
-// other edit. Pain points are an As-Is concern, so the parent only mounts this for
-// As-Is maps. Presentation only: it holds no copy of the data.
+// other edit. Available on both As-Is and To-Be maps (BACKLOG 2.5 lifted the old
+// As-Is-only gate). Presentation only: it holds no copy of the data. Mounted by
+// StepInspector's Pain Points tab and, grouped per step, by PainPointsTab.vue.
 import { computed } from 'vue'
 import { Button, FormControl, Combobox, FeatherIcon } from 'frappe-ui'
 import { masterOptions } from '@/data/masters.js'
@@ -26,7 +27,7 @@ const points = computed(() => props.step.pain_points || [])
 <template>
   <div class="flex flex-col gap-3">
     <p v-if="!points.length" class="text-xs text-ink-gray-5">
-      No pain points captured. Record As-Is issues like bottlenecks or duplicate
+      No pain points captured. Record issues like bottlenecks or duplicate
       data entry.
     </p>
 

@@ -31,6 +31,7 @@ declare module 'vue' {
     NewMapDialog: typeof import('./src/components/NewMapDialog.vue')['default']
     PainPointDialog: typeof import('./src/components/editor/PainPointDialog.vue')['default']
     PainPointEditor: typeof import('./src/components/editor/PainPointEditor.vue')['default']
+    PainPointsTab: typeof import('./src/components/editor/PainPointsTab.vue')['default']
     PasteDialog: typeof import('./src/components/editor/PasteDialog.vue')['default']
     ProcessDialog: typeof import('./src/components/ProcessDialog.vue')['default']
     RenameDialog: typeof import('./src/components/RenameDialog.vue')['default']

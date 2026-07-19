@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { collectRisks } from './risks.js'
+import { collectRisks, summarizePainPoints } from './risks.js'
 
 const steps = [
   {
@@ -50,5 +50,36 @@ describe('collectRisks', () => {
       { uid: 'w', step_id: 'S1', pain_points: [{ description: 'no severity set' }] },
     ])
     expect(risks[0].severity).toBe('Low')
+  })
+
+  it('carries the point index within its OWN step so edits can be routed back', () => {
+    const risks = collectRisks(steps)
+    const [noSla, emailOnly] = risks.filter((r) => r.uid === 'b')
+    expect(noSla.index).toBe(0)
+    expect(emailOnly.index).toBe(1)
+  })
+})
+
+describe('summarizePainPoints', () => {
+  it('groups by step, worst severity first, and totals by severity', () => {
+    const summary = summarizePainPoints(steps)
+    expect(summary.steps.map((s) => s.uid)).toEqual(['b', 'a'])
+    expect(summary.steps[0]).toMatchObject({ severity: 'High', count: 2 })
+    expect(summary.total).toBe(3)
+    expect(summary.bySeverity).toEqual({ High: 1, Medium: 1, Low: 1 })
+  })
+
+  it('omits steps with no pain points', () => {
+    const summary = summarizePainPoints(steps)
+    expect(summary.steps.some((s) => s.uid === 'c')).toBe(false)
+  })
+
+  it('returns an empty summary for a map with no pain points', () => {
+    expect(summarizePainPoints([{ uid: 'z', pain_points: [] }])).toEqual({
+      total: 0,
+      bySeverity: { High: 0, Medium: 0, Low: 0 },
+      steps: [],
+    })
+    expect(summarizePainPoints([]).total).toBe(0)
   })
 })
