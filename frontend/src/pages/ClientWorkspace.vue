@@ -29,6 +29,7 @@ import { serverMessage } from '@/data/errors.js'
 import { breadcrumbTrail, findMapContext, findProcessForSub } from '@/workspace/treeContext.js'
 import WorkspaceTopBar from '@/components/workspace/WorkspaceTopBar.vue'
 import TreeRail from '@/components/workspace/TreeRail.vue'
+import ClientSummary from '@/components/workspace/ClientSummary.vue'
 import MapWorkspace from '@/components/editor/MapWorkspace.vue'
 import ProcessDialog from '@/components/ProcessDialog.vue'
 import SubProcessDialog from '@/components/SubProcessDialog.vue'
@@ -260,9 +261,12 @@ async function moveSub({ process, sub, direction }) {
            page, with the body doing real work — the children list — rather
            than sitting empty below three rows on white. -->
       <section v-else class="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div v-if="!selected" class="flex flex-1 items-center justify-center text-sm text-ink-gray-5">
-          Select a process, sub process, or map to see its details.
-        </div>
+        <ClientSummary
+          v-if="!selected"
+          :client="client"
+          :client-name="tree.data?.client_name || client"
+          :processes="processes"
+        />
 
         <template v-else-if="selected.level === 'sub'">
           <div class="flex items-center gap-3 border-b border-outline-gray-1 px-6 py-3">

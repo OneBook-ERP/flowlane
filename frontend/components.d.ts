@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ClientListRow: typeof import('./src/components/ClientListRow.vue')['default']
+    ClientSummary: typeof import('./src/components/workspace/ClientSummary.vue')['default']
     ClientTile: typeof import('./src/components/ClientTile.vue')['default']
     ConfirmDeleteDialog: typeof import('./src/components/ConfirmDeleteDialog.vue')['default']
     ConnectionEditorDialog: typeof import('./src/components/editor/ConnectionEditorDialog.vue')['default']
