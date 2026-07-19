@@ -28,6 +28,23 @@ def get_masters() -> dict[str, list[dict]]:
 
 
 @frappe.whitelist()
+def get_industry_vertical_defaults() -> dict[str, list[str]]:
+	"""Each Industry Vertical's seeded ``default_modules`` (BACKLOG 1.3), keyed
+	by vertical name. Fetched once so picking a vertical in New Client can
+	auto-populate the Modules field without a round-trip per selection.
+	"""
+	rows = frappe.get_all(
+		"Flowlane Industry Vertical Module",
+		fields=["parent", "erpnext_module"],
+		order_by="idx",
+	)
+	defaults: dict[str, list[str]] = {}
+	for row in rows:
+		defaults.setdefault(row.parent, []).append(row.erpnext_module)
+	return defaults
+
+
+@frappe.whitelist()
 def get_diagram_meta() -> dict:
 	"""Lookups the swimlane engine needs but the plain dropdowns omit:
 

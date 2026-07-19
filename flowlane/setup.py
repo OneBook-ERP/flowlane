@@ -223,6 +223,23 @@ def _seed_masters() -> None:
 	_seed("Flowlane Industry Vertical", "vertical_name", INDUSTRY_VERTICALS)
 	_seed("Flowlane ERPNext Module", "module_name", ERPNEXT_MODULES)
 	_seed("Flowlane Pain Point Type", "type_name", PAIN_POINT_TYPES)
+	_seed_industry_vertical_defaults()
+
+
+def _seed_industry_vertical_defaults() -> None:
+	"""Populate each Industry Vertical's ``default_modules`` (BACKLOG 1.3) from
+	PROCESS-CATALOG.md §1's Core-modules column (situational modules
+	deliberately excluded — those stay a manual add for the consultant).
+	Idempotent: rewrites the child table to exactly match the mapping below,
+	same as re-running any other seed step, safe on re-migrate.
+	"""
+	for vertical, modules in INDUSTRY_VERTICAL_CORE_MODULES.items():
+		doc = frappe.get_doc("Flowlane Industry Vertical", vertical)
+		current = {row.erpnext_module for row in doc.default_modules}
+		if current == set(modules):
+			continue
+		doc.set("default_modules", [{"erpnext_module": module} for module in modules])
+		doc.save(ignore_permissions=True)
 
 
 def _seed(doctype: str, name_field: str, rows: list) -> None:
@@ -279,6 +296,20 @@ PAIN_POINT_TYPES = [
 	"Bottleneck", "Duplicate Data Entry", "Missing Control", "Delayed Approval",
 	"Unclear Ownership", "Manual/Off-System Work", "Rework/Error-Prone", "Compliance Risk",
 ]
+
+# Industry -> Core modules only (PROCESS-CATALOG.md §1's matrix; Situational
+# modules are deliberately excluded so the consultant adds those by hand when
+# relevant). Seeds Flowlane Industry Vertical.default_modules (BACKLOG 1.3).
+INDUSTRY_VERTICAL_CORE_MODULES = {
+	"Manufacturing": ["Selling", "Buying", "Stock", "Manufacturing", "Accounts", "Quality"],
+	"Trading/Distribution": ["Selling", "Buying", "Stock", "Accounts"],
+	"Healthcare": ["Healthcare", "Accounts", "HR"],
+	"Services": ["Selling", "CRM", "Projects", "Accounts"],
+	"Retail": ["Selling", "Stock", "Buying", "Accounts"],
+	"Education": ["Education", "Accounts", "HR"],
+	"Non-Profit": ["Accounts", "HR", "Projects"],
+	"Construction": ["Projects", "Buying", "Stock", "Accounts"],
+}
 
 
 # --- seed process templates (create-if-absent) ------------------------------

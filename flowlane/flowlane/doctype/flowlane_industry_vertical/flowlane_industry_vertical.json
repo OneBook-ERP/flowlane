@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "vertical_name",
-  "description"
+  "description",
+  "default_modules"
  ],
  "fields": [
   {
@@ -22,6 +23,13 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "fieldname": "default_modules",
+   "fieldtype": "Table MultiSelect",
+   "label": "Default Modules",
+   "options": "Flowlane Industry Vertical Module",
+   "description": "Core ERPNext modules this industry typically needs — auto-fills the New Client dialog's Modules picker the first time this vertical is selected."
   }
  ],
  "index_web_pages_for_search": 1,
