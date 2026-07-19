@@ -4,8 +4,9 @@
 // and each parsed row becomes a new Map Step. Column order is shown so the paste
 // lands in the right fields.
 import { ref, watch } from 'vue'
-import { Dialog, Button, FormControl, toast } from 'frappe-ui'
+import { Dialog, Button, FeatherIcon, FormControl, toast } from 'frappe-ui'
 import { parseClipboard } from '@/map/pasteParser.js'
+import { buildAiPastePrompt } from '@/map/aiPastePrompt.js'
 import { PASTE_FIELDS, COLUMNS } from './columns.js'
 import { useMapStore } from '@/stores/useMapStore.js'
 
@@ -36,6 +37,19 @@ function apply() {
   toast.success(`Added ${rows.length} row${rows.length === 1 ? '' : 's'}.`)
   emit('update:modelValue', false)
 }
+
+// T3.1 — "AI paste" mode: copy a documented prompt (same column order as the
+// paste mapping above) for the consultant to run in any external AI tool. The
+// AI's tab-delimited reply is pasted back into the textarea above, using the
+// SAME parser — no separate import path.
+async function copyAiPrompt() {
+  try {
+    await navigator.clipboard.writeText(buildAiPastePrompt(columnLabels))
+    toast.success('Prompt copied — paste it into your AI tool along with your notes.')
+  } catch {
+    toast.error('Could not copy to clipboard.')
+  }
+}
 </script>
 
 <template>
@@ -46,9 +60,15 @@ function apply() {
   >
     <template #body-content>
       <div class="flex flex-col gap-3">
-        <p class="text-sm text-ink-gray-6">
-          Paste tab-separated rows. Columns map in order:
-        </p>
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-sm text-ink-gray-6">
+            Paste tab-separated rows. Columns map in order:
+          </p>
+          <Button variant="subtle" size="sm" class="shrink-0" @click="copyAiPrompt">
+            <template #prefix><FeatherIcon name="clipboard" class="h-4 w-4" /></template>
+            Copy AI Prompt
+          </Button>
+        </div>
         <div class="flex flex-wrap gap-1">
           <span
             v-for="(label, i) in columnLabels"
@@ -58,6 +78,10 @@ function apply() {
             {{ i + 1 }}. {{ label }}
           </span>
         </div>
+        <p class="text-xs text-ink-gray-5">
+          No notes handy? Copy the AI prompt above, run it (with your raw process
+          notes) in any AI chat tool, then paste its reply below.
+        </p>
         <FormControl
           type="textarea"
           :rows="8"
