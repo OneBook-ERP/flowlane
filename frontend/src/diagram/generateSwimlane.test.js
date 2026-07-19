@@ -242,3 +242,99 @@ describe('generateSwimlane — direction + overrides', () => {
     expect(g.edges).toEqual([])
   })
 })
+
+// Auto-arrange enhancement: node width used to be a flat 150px with a
+// separate, disagreeing 24-char label truncation in DiagramTab.vue — a
+// label like "Generate Fee Invoice" (25 chars) was cut to "…Invoi…" even
+// though a slightly wider box would show it whole (see the real map that
+// surfaced this: admission-to-alumni/Fee Collection — As-Is).
+describe('generateSwimlane — label-driven node width', () => {
+  it('widens a Rectangle beyond the old flat 150px for a longer label', () => {
+    const g = generateSwimlane([step('S1', { step_name: 'Generate Fee Invoice' })], 'LR')
+    const s1 = g.nodes[0]
+    expect(s1.label).toBe('Generate Fee Invoice')
+    expect(s1.w).toBeGreaterThan(150)
+  })
+
+  it('does not truncate a label that now fits in the widened node', () => {
+    const g = generateSwimlane([step('S1', { step_name: 'Generate Fee Invoice' })], 'LR')
+    expect(g.nodes[0].label).not.toContain('…')
+  })
+
+  it('keeps a short label at the original minimum width', () => {
+    const g = generateSwimlane([step('S1', { step_name: 'Close' })], 'LR')
+    expect(g.nodes[0].w).toBe(150)
+  })
+
+  it('still truncates a label too long even for the widened maximum', () => {
+    const longName = 'A'.repeat(80)
+    const g = generateSwimlane([step('S1', { step_name: longName })], 'LR')
+    expect(g.nodes[0].label).toContain('…')
+    expect(g.nodes[0].label.length).toBeLessThan(longName.length)
+    expect(g.nodes[0].w).toBeLessThanOrEqual(260)
+  })
+
+  it('gives a Decision (Diamond) extra width over a Rectangle for the same text', () => {
+    const text = 'Payment Received Successfully'
+    const rect = generateSwimlane([step('S1', { node_type: 'Process/Task', step_name: text })], 'LR')
+    const diamond = generateSwimlane([step('S1', { node_type: 'Decision', step_name: text })], 'LR')
+    expect(diamond.nodes[0].w).toBeGreaterThan(rect.nodes[0].w)
+  })
+
+  it('spaces a column with a wide node further from its neighbour than a compact column', () => {
+    const wide = generateSwimlane(
+      [
+        step('S1', { step_name: 'Generate Fee Invoice For Student', connections: [edge('S2')] }),
+        step('S2', { step_name: 'X' }),
+      ],
+      'LR'
+    )
+    const compact = generateSwimlane(
+      [step('S1', { step_name: 'X', connections: [edge('S2')] }), step('S2', { step_name: 'X' })],
+      'LR'
+    )
+    const wideGap = wide.nodes[1].x - wide.nodes[0].x
+    const compactGap = compact.nodes[1].x - compact.nodes[0].x
+    expect(wideGap).toBeGreaterThan(compactGap)
+  })
+
+  it('never lets two nodes in the same column collide once width varies (no fixed gap regression)', () => {
+    const steps = [
+      step('S1', { lane_role: 'Sales', step_name: 'A very long step name that grows the node' }),
+      step('S2', { lane_role: 'Ops', step_name: 'Short' }),
+    ]
+    const g = generateSwimlane(steps, 'LR')
+    const [s1, s2] = g.nodes
+    // Same column (both rank 0, different lanes) -> same x, sharing the WIDER node's slot.
+    expect(s1.x).toBe(s2.x)
+  })
+
+  it('does not change TB column spacing (label width only affects LR)', () => {
+    const short = generateSwimlane(
+      [step('S1', { step_name: 'X', connections: [edge('S2')] }), step('S2', { step_name: 'X' })],
+      'TB'
+    )
+    const long = generateSwimlane(
+      [
+        step('S1', { step_name: 'A very long step name indeed', connections: [edge('S2')] }),
+        step('S2', { step_name: 'X' }),
+      ],
+      'TB'
+    )
+    expect(long.nodes[1].y - long.nodes[0].y).toBe(short.nodes[1].y - short.nodes[0].y)
+  })
+})
+
+describe('generateSwimlane — edge endpoint clearance', () => {
+  it('stops an edge a few px short of the target instead of touching its border', () => {
+    const steps = [
+      step('S1', { connections: [edge('S2')] }),
+      step('S2', {}),
+    ]
+    const g = generateSwimlane(steps, 'LR')
+    const s2 = g.nodes.find((n) => n.step_id === 'S2')
+    const [edgeRow] = g.edges
+    const lastPoint = edgeRow.points[edgeRow.points.length - 1]
+    expect(lastPoint.x).toBeLessThan(s2.x - s2.w / 2)
+  })
+})

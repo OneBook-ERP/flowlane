@@ -328,10 +328,16 @@ onBeforeUnmount(() => {
 
 // --- render helpers -------------------------------------------------------
 
+// Auto-arrange enhancement: this used to hard-truncate every label to 24
+// characters, independent of and inconsistent with the node's actual
+// rendered width (150px flat, also fixed) — a label like "S2 · Generate Fee
+// Invoice" got cut to "…Invoi…" even where a wider box would have shown it
+// whole. Node width is now label-driven and truncation lives in ONE place,
+// generateSwimlane.js's fitLabel/nodeWidth, so the two decisions can never
+// disagree — this just builds the full "step_id · step_name" text.
 function labelFor(row) {
   const id = row.step_id ? `${row.step_id} · ` : ''
-  const text = `${id}${row.step_name || 'Untitled'}`
-  return text.length > 24 ? `${text.slice(0, 23)}…` : text
+  return `${id}${row.step_name || 'Untitled'}`
 }
 
 function bandRect(lane) {

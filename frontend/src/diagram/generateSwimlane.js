@@ -18,13 +18,30 @@
 //     edges:[{from,to,label,points:[{x,y}],labelX,labelY}],
 //     width, height, direction }
 
-const NODE_W = 150
+const NODE_W_MIN = 150
+const NODE_W_MAX = 260 // beyond this a label truncates instead of growing the node further
 const NODE_H = 58
-const COL_GAP = 220 // centre-to-centre spacing along the flow axis
+const CHAR_WIDTH = 6.4 // rough average glyph width at the diagram's 11px label font
+const TEXT_PADDING = 32 // horizontal breathing room inside the shape (16px each side)
+const COL_CLEARANCE = 70 // LR only: minimum gap between adjacent columns' node
+// BORDERS — room for the elbow jog + an edge label ("Yes"/"No") without crowding.
+// Auto-arrange enhancement: LR column spacing used to be a flat COL_GAP (220)
+// center-to-center regardless of node width, which (a) wasted space when every
+// node was short and (b) would have let two WIDE neighbours collide once node
+// width became label-dependent (see nodeWidth below) — computeColumnPositions
+// replaces the fixed gap with one sized to each column's actual widest node.
+const TB_COL_GAP = 220 // TB keeps its original flat spacing: every node is the
+// same fixed NODE_H regardless of label, so TB never had the width problem LR
+// did, and vertical rhythm wasn't part of what needed enhancing here.
 const LANE_SIZE = 130 // cross-axis thickness of one lane band
 const MARGIN = 40
 const LABEL_GUTTER = 140 // reserved at the FLOW start for lane role labels
 const SIBLING_OFFSET = 16 // nudge overlapping parallel edges apart
+const EDGE_ENDPOINT_GAP = 4 // small pull-back before the arrowhead so it lands just
+// short of the target shape instead of touching it — most visible (and most needed)
+// on a Decision's sharp Diamond point, where an arrowhead landing EXACTLY on the
+// vertex reads as two triangles stabbing into each other rather than one arrow
+// arriving cleanly.
 
 const DEFAULT_SHAPES = {
   'Start/End': 'Terminator',
@@ -45,9 +62,10 @@ export function generateSwimlane(steps, direction = 'TB', options = {}) {
   const laneIndex = new Map(lanes.map((lane) => [lane.role, lane.index]))
   const ranks = computeColumns(nodeIds, edges)
   const columns = spreadWithinLanes(nodes, ranks, laneIndex)
+  const columnFlow = computeColumnPositions(nodes, columns, dir)
 
-  const placed = placeNodes(nodes, columns, laneIndex, dir)
-  const geometry = layoutBands(lanes, placed, columns, dir)
+  const placed = placeNodes(nodes, columns, laneIndex, dir, columnFlow.positions)
+  const geometry = layoutBands(lanes, placed, columnFlow, dir)
   const routed = routeEdges(edges, placed, dir)
 
   return {
@@ -66,21 +84,70 @@ export function generateSwimlane(steps, direction = 'TB', options = {}) {
 function normalizeSteps(steps) {
   return (steps || [])
     .filter((step) => step && step.step_id !== undefined && step.step_id !== null)
-    .map((step) => ({
-      step_id: String(step.step_id),
-      label: step.label || step.step_name || String(step.step_id),
-      role: step.lane_role || '',
-      node_type: step.node_type || '',
-      shape: resolveShape(step),
-      manual_x: numberOrNull(step.manual_x),
-      manual_y: numberOrNull(step.manual_y),
-      connections: step.connections || [],
-    }))
+    .map((step) => {
+      const shape = resolveShape(step)
+      const rawLabel = step.label || step.step_name || String(step.step_id)
+      const label = fitLabel(rawLabel, shape)
+      return {
+        step_id: String(step.step_id),
+        label,
+        role: step.lane_role || '',
+        node_type: step.node_type || '',
+        shape,
+        w: nodeWidth(label, shape),
+        manual_x: numberOrNull(step.manual_x),
+        manual_y: numberOrNull(step.manual_y),
+        connections: step.connections || [],
+      }
+    })
 }
 
 function resolveShape(step) {
   if (step.shape) return step.shape
   return DEFAULT_SHAPES[step.node_type] || 'Rectangle'
+}
+
+// Auto-arrange enhancement: node width used to be a flat 150px regardless of
+// label length, and DiagramTab.vue separately hard-truncated every label to
+// 24 characters as a workaround — the two numbers were never in agreement
+// (24 chars comfortably fits in 150px for a Rectangle but not for a Diamond,
+// whose text sits between two tapering corners), so a label like "Generate
+// Fee Invoice" (25 chars) got cut to "Generate Fee Invoi…" even though a
+// slightly wider box would have shown it in full. Sizing is co-located here
+// with the truncation decision instead, so they can never disagree: width
+// grows with the label (clamped to NODE_W_MAX), and a label is only ever
+// truncated once even the MAX width can't fit it.
+//
+// Diamond/Parallelogram taper away from their horizontal midline — a Diamond
+// pinches to a point at top/bottom, a Parallelogram just skews — so the same
+// text needs more bounding-box width than a Rectangle to keep clear of the
+// shape's corners.
+function shapeWidthFactor(shape) {
+  if (shape === 'Diamond') return 1.4
+  if (shape === 'Parallelogram') return 1.15
+  return 1
+}
+
+function nodeWidth(label, shape) {
+  const raw = Math.ceil(label.length * CHAR_WIDTH) + TEXT_PADDING
+  return clamp(Math.ceil(raw * shapeWidthFactor(shape)), NODE_W_MIN, NODE_W_MAX)
+}
+
+// The most characters that still fit inside NODE_W_MAX for this shape — the
+// inverse of nodeWidth's formula, used only to decide when a label must
+// truncate rather than let the node keep growing.
+function maxLabelChars(shape) {
+  return Math.floor((NODE_W_MAX / shapeWidthFactor(shape) - TEXT_PADDING) / CHAR_WIDTH)
+}
+
+function fitLabel(label, shape) {
+  const max = maxLabelChars(shape)
+  if (label.length <= max) return label
+  return `${label.slice(0, Math.max(1, max - 1))}…`
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value))
 }
 
 function collectEdges(nodes, idSet) {
@@ -243,11 +310,49 @@ function topoOrder(nodeIds, forward) {
 
 // --- placement ------------------------------------------------------------
 
-function placeNodes(nodes, columns, laneIndex, dir) {
+// Auto-arrange enhancement (LR only — see TB_COL_GAP): how far a column needs
+// to advance along the flow axis (X, in LR) depends on what's actually IN it,
+// not a flat constant — each column advances by its WIDEST node's width plus
+// COL_CLEARANCE, so a column of short labels stays compact and a column with
+// one long label only pushes ITS neighbours apart, not the whole diagram
+// uniformly. TB keeps the original flat gap (below) since every node is the
+// same fixed NODE_H there regardless of label.
+function computeColumnPositions(nodes, columns, dir) {
+  const maxCol = maxValue(columns)
+
+  if (dir === 'TB') {
+    const positions = new Map()
+    for (let col = 0; col <= maxCol; col += 1) {
+      positions.set(col, NODE_H / 2 + col * TB_COL_GAP)
+    }
+    return { positions, contentExtent: NODE_H + maxCol * TB_COL_GAP }
+  }
+
+  const maxWidthByCol = new Map()
+  nodes.forEach((node) => {
+    const col = columns.get(node.step_id) || 0
+    maxWidthByCol.set(col, Math.max(maxWidthByCol.get(col) || 0, node.w))
+  })
+
+  const positions = new Map()
+  let cursor = 0
+  let lastHalf = 0
+  for (let col = 0; col <= maxCol; col += 1) {
+    const w = maxWidthByCol.get(col) || NODE_W_MIN
+    cursor += w / 2
+    positions.set(col, cursor)
+    lastHalf = w / 2
+    cursor += w / 2 + COL_CLEARANCE
+  }
+  const contentExtent = maxWidthByCol.size ? (positions.get(maxCol) || 0) + lastHalf : 0
+  return { positions, contentExtent }
+}
+
+function placeNodes(nodes, columns, laneIndex, dir, colPositions) {
   return nodes.map((node) => {
     const col = columns.get(node.step_id) || 0
     const lane = laneIndex.get(node.role) || 0
-    const auto = cellCenter(col, lane, dir)
+    const auto = cellCenter(col, lane, dir, colPositions)
     const manual = hasManualOverride(node)
     return {
       step_id: node.step_id,
@@ -259,7 +364,7 @@ function placeNodes(nodes, columns, laneIndex, dir) {
       laneIndex: lane,
       x: manual ? node.manual_x : auto.x,
       y: manual ? node.manual_y : auto.y,
-      w: NODE_W,
+      w: node.w,
       h: NODE_H,
     }
   })
@@ -284,17 +389,16 @@ function hasManualOverride(node) {
 // Centre of the (column, lane) cell. The flow axis carries the columns and starts
 // after LABEL_GUTTER so lane labels have room; the cross axis carries the lanes.
 // TB: columns run down (y), lanes across (x). LR: columns run right (x), lanes
-// down (y).
-function cellCenter(col, lane, dir) {
-  const half = dir === 'TB' ? NODE_H / 2 : NODE_W / 2
-  const flow = LABEL_GUTTER + half + col * COL_GAP
+// down (y). colPositions.get(col) is already a CENTRE offset (see
+// computeColumnPositions), so no extra half-extent is added here.
+function cellCenter(col, lane, dir, colPositions) {
+  const flow = LABEL_GUTTER + (colPositions.get(col) ?? 0)
   const cross = MARGIN + lane * LANE_SIZE + LANE_SIZE / 2
   return dir === 'TB' ? { x: cross, y: flow } : { x: flow, y: cross }
 }
 
-function layoutBands(lanes, placed, columns, dir) {
-  const maxCol = maxValue(columns)
-  const flowSpan = LABEL_GUTTER + NODE_W + maxCol * COL_GAP + MARGIN
+function layoutBands(lanes, placed, columnFlow, dir) {
+  const flowSpan = LABEL_GUTTER + columnFlow.contentExtent + MARGIN
   const crossSpan = MARGIN * 2 + lanes.length * LANE_SIZE
 
   const bands = lanes.map((lane) => {
@@ -365,10 +469,14 @@ function routeEdge(edge, byNode, offsets, dir) {
 
 // Orthogonal 4-point elbow between two node borders along the flow axis. The
 // `offset` slides the elbow so parallel sibling edges do not overlap.
+// EDGE_ENDPOINT_GAP pulls the arrival point back a few px from the target's
+// border so the arrowhead doesn't land exactly on it — most visible on a
+// Decision's Diamond, whose border AT the incoming edge's height is already
+// a sharp point (see EDGE_ENDPOINT_GAP's own comment).
 function elbow(from, to, dir, offset) {
   if (dir === 'TB') {
     const startY = from.y + from.h / 2
-    const endY = to.y - to.h / 2
+    const endY = to.y - to.h / 2 - EDGE_ENDPOINT_GAP
     const midY = (startY + endY) / 2 + offset
     return [
       { x: from.x, y: startY },
@@ -378,7 +486,7 @@ function elbow(from, to, dir, offset) {
     ]
   }
   const startX = from.x + from.w / 2
-  const endX = to.x - to.w / 2
+  const endX = to.x - to.w / 2 - EDGE_ENDPOINT_GAP
   const midX = (startX + endX) / 2 + offset
   return [
     { x: startX, y: from.y },
