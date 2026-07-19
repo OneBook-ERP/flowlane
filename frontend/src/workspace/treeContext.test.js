@@ -5,6 +5,7 @@ import {
   breadcrumbTrail,
   crumbLabel,
   allExpandableNames,
+  flattenMaps,
 } from './treeContext.js'
 
 function tree() {
@@ -112,5 +113,24 @@ describe('allExpandableNames', () => {
 
   it('handles a process with no sub-processes', () => {
     expect(allExpandableNames([{ name: 'PROC-3', sub_processes: [] }])).toEqual(['PROC-3'])
+  })
+})
+
+describe('flattenMaps', () => {
+  it('collects every map with its process/sub-process ancestry attached', () => {
+    const rows = flattenMaps(tree())
+    expect(rows).toHaveLength(1)
+    expect(rows[0].name).toBe('MAP-1')
+    expect(rows[0].process.name).toBe('PROC-1')
+    expect(rows[0].sub.name).toBe('SUB-1')
+  })
+
+  it('returns an empty array when no sub-process has any maps', () => {
+    expect(flattenMaps([{ name: 'PROC-3', sub_processes: [{ name: 'SUB-3', maps: [] }] }])).toEqual([])
+  })
+
+  it('returns an empty array for an empty/undefined tree', () => {
+    expect(flattenMaps(undefined)).toEqual([])
+    expect(flattenMaps([])).toEqual([])
   })
 })

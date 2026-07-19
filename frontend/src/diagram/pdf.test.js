@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPdf, dataUrlToBytes } from './pdf.js'
+import { buildPdf, buildMultiPagePdf, dataUrlToBytes } from './pdf.js'
 
 const decoder = new TextDecoder('latin1')
 
@@ -42,6 +42,43 @@ describe('buildPdf', () => {
     const startxref = Number(text.match(/startxref\n(\d+)/)[1])
     expect(startxref).toBe(marker)
     expect(text).toContain('/Root 1 0 R')
+  })
+})
+
+describe('buildMultiPagePdf', () => {
+  const page = (w, h) => ({ jpeg: fakeJpeg, pixelWidth: w * 2, pixelHeight: h * 2, pageWidth: w, pageHeight: h })
+  const pdf = buildMultiPagePdf([page(200, 150), page(300, 100), page(150, 150)])
+  const text = decoder.decode(pdf)
+
+  it('a single page is byte-identical to buildPdf (backward compatible)', () => {
+    const single = buildPdf({ jpeg: fakeJpeg, pixelWidth: 400, pixelHeight: 300, pageWidth: 200, pageHeight: 150 })
+    const viaMulti = buildMultiPagePdf([{ jpeg: fakeJpeg, pixelWidth: 400, pixelHeight: 300, pageWidth: 200, pageHeight: 150 }])
+    expect(Array.from(viaMulti)).toEqual(Array.from(single))
+  })
+
+  it('declares the right page count and one Kids entry per page', () => {
+    expect(text).toContain('/Count 3')
+    expect(text).toMatch(/\/Kids \[3 0 R 6 0 R 9 0 R\]/)
+  })
+
+  it('gives each page its own MediaBox sized to its own dimensions', () => {
+    expect(text).toContain('/MediaBox [0 0 200 150]')
+    expect(text).toContain('/MediaBox [0 0 300 100]')
+    expect(text).toContain('/MediaBox [0 0 150 150]')
+  })
+
+  it('wires each page to its own image and content stream objects', () => {
+    expect(text).toContain('/Im0 4 0 R')
+    expect(text).toContain('/Contents 5 0 R')
+    expect(text).toContain('/Im0 7 0 R')
+    expect(text).toContain('/Contents 8 0 R')
+    expect(text).toContain('/Im0 10 0 R')
+    expect(text).toContain('/Contents 11 0 R')
+  })
+
+  it('still ends with a valid xref/trailer covering every object', () => {
+    expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+    expect(text).toContain('/Size 12') // 11 objects + the free-list head
   })
 })
 

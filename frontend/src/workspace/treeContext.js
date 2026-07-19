@@ -55,6 +55,22 @@ export function crumbLabel(crumb) {
   return crumb.node.map_title
 }
 
+// Flatten the tree to one row per map, each carrying its process/sub-process
+// ancestry (BACKLOG 2.6 — the bulk-export orchestrator needs every map under
+// a client, and ClientWorkspace already has this tree loaded, so exporting
+// reuses it rather than adding a second fetch).
+export function flattenMaps(processes) {
+  const rows = []
+  for (const process of processes || []) {
+    for (const sub of process.sub_processes || []) {
+      for (const map of sub.maps || []) {
+        rows.push({ ...map, process, sub })
+      }
+    }
+  }
+  return rows
+}
+
 // Every node name that owns an expand/collapse toggle in HierarchyTree —
 // Process (L1) and Sub Process (L2) rows only; Map (L3) rows are leaves with
 // no toggle of their own. Used by TreeRail's expand-all/collapse-all button

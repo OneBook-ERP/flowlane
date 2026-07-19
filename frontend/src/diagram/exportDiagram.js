@@ -8,7 +8,9 @@
 import { rasterizeSvg, svgSize } from './thumbnail.js'
 import { buildPdf, dataUrlToBytes } from './pdf.js'
 
-const JPEG_QUALITY = 0.92
+// Exported so bulkExport.js's per-page JPEG raster (combined PDF, BACKLOG
+// 2.6) uses the identical quality a single-map export does.
+export const JPEG_QUALITY = 0.92
 
 // Export descriptors surfaced by the Export menu. `run` returns a Blob.
 export const EXPORT_FORMATS = [
@@ -67,7 +69,9 @@ function serializeSvg(svgEl, background) {
   return new XMLSerializer().serializeToString(clone)
 }
 
-function canvasBlob(canvas, type, quality) {
+// Exported for reuse by diagram/bulkExport.js (BACKLOG 2.6), which rasterises
+// per-map canvases the same way a single export does.
+export function canvasBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('Canvas export failed'))),
@@ -90,12 +94,18 @@ export function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-// Safe download filename from a map title + extension. Pure (unit-tested).
-export function exportFilename(title, ext) {
-  const slug = String(title || '')
+// URL/filesystem-safe slug from arbitrary text. Pure (unit-tested); shared by
+// exportFilename below and diagram/bulkFilenames.js (BACKLOG 2.6), so a
+// single-map export and a bulk-export entry name text the same way.
+export function slugify(text) {
+  return String(text || '')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-  return `${slug || 'flowlane-map'}.${ext}`
+}
+
+// Safe download filename from a map title + extension. Pure (unit-tested).
+export function exportFilename(title, ext) {
+  return `${slugify(title) || 'flowlane-map'}.${ext}`
 }

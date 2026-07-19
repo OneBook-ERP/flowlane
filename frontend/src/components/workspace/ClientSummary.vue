@@ -3,7 +3,8 @@
 // empty-state slot (nothing selected in the tree). "Surface the summary
 // before the detail": total counts, pain-point/status breakdowns and the
 // mapping timeline, so a consultant opening a client sees its shape before
-// drilling into any one process.
+// drilling into any one process. Also hosts the bulk "Download all" export
+// (BACKLOG 2.6) since both need the same client-wide map list.
 //
 // Two things this deliberately does NOT show, because the data doesn't
 // exist: a real "mapping start date" field (uses the client's own
@@ -11,11 +12,14 @@
 // history (only a plain status field exists per map today — item 5.1 is
 // parked). Modules-in-use is DERIVED from distinct Map Step erpnext_module
 // values, not a separately tracked selection.
-import { computed } from 'vue'
-import { FeatherIcon } from 'frappe-ui'
+import { ref, computed } from 'vue'
+import { Button, Dropdown, FeatherIcon, toast } from 'frappe-ui'
 import StatusChip from '@/components/StatusChip.vue'
 import { statusChip, severityChip } from '@/ui/chipColors.js'
 import { loadClientSummary } from '@/data/clientSummary.js'
+import { flattenMaps } from '@/workspace/treeContext.js'
+import { buildBulkZip, buildBulkPdf } from '@/diagram/bulkExport.js'
+import { downloadBlob, exportFilename } from '@/diagram/exportDiagram.js'
 
 const props = defineProps({
   client: { type: String, required: true },
@@ -24,6 +28,8 @@ const props = defineProps({
 })
 
 const summary = loadClientSummary(props.client)
+const mapRows = computed(() => flattenMaps(props.processes))
+const hasMaps = computed(() => mapRows.value.length > 0)
 
 const counts = computed(() => summary.data?.counts || { processes: 0, sub_processes: 0, maps: 0 })
 const mapStatus = computed(() => summary.data?.map_status || { Draft: 0, 'In Review': 0, Approved: 0 })
@@ -48,6 +54,41 @@ const severityRows = computed(() =>
   ['High', 'Medium', 'Low'].map((severity) => ({ severity, count: painPoints.value[severity] || 0 }))
 )
 
+// --- bulk export (BACKLOG 2.6) ---------------------------------------------
+
+const exporting = ref(false)
+const exportStatus = ref('')
+
+const exportOptions = [
+  { label: 'Download as ZIP (per-map PNGs)', onClick: () => runExport('zip') },
+  { label: 'Download as combined PDF', onClick: () => runExport('pdf') },
+]
+
+async function runExport(kind) {
+  if (exporting.value || !hasMaps.value) return
+  exporting.value = true
+  try {
+    const onProgress = ({ index, total }) => {
+      exportStatus.value = `Rendering map ${index} of ${total}…`
+    }
+    const result =
+      kind === 'zip'
+        ? await buildBulkZip(mapRows.value, { onProgress })
+        : await buildBulkPdf(mapRows.value, { onProgress })
+    const ext = kind === 'zip' ? 'zip' : 'pdf'
+    downloadBlob(result.blob, exportFilename(`${props.clientName} process maps`, ext))
+    const skippedNote = result.skippedCount
+      ? `, ${result.skippedCount} skipped (no steps yet)`
+      : ''
+    toast.success(`Exported ${result.includedCount} map${result.includedCount === 1 ? '' : 's'}${skippedNote}`)
+  } catch (error) {
+    toast.error(`Bulk export failed: ${error?.message || 'unknown error'}`)
+  } finally {
+    exporting.value = false
+    exportStatus.value = ''
+  }
+}
+
 function formatDate(value) {
   if (!value) return null
   const date = new Date(value)
@@ -59,12 +100,26 @@ function formatDate(value) {
 <template>
   <div class="flex-1 overflow-y-auto p-6">
     <div class="mx-auto flex max-w-4xl flex-col gap-6">
-      <div>
-        <h2 class="text-lg font-semibold text-ink-gray-9">Client Summary</h2>
-        <p class="text-sm text-ink-gray-5">
-          {{ clientName }} · {{ clientMeta.industry_vertical || 'No industry vertical' }}
-        </p>
+      <!-- header: title + the one primary action on this screen -->
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-ink-gray-9">Client Summary</h2>
+          <p class="text-sm text-ink-gray-5">
+            {{ clientName }} · {{ clientMeta.industry_vertical || 'No industry vertical' }}
+          </p>
+        </div>
+        <Dropdown :options="exportOptions" placement="right">
+          <Button variant="solid" :loading="exporting" :disabled="!hasMaps" label="Download all">
+            <template #prefix><FeatherIcon name="download" class="h-4 w-4" /></template>
+            Download all
+            <template #suffix><FeatherIcon name="chevron-down" class="h-4 w-4" /></template>
+          </Button>
+        </Dropdown>
       </div>
+      <p v-if="exporting" class="-mt-4 text-xs text-ink-gray-5">{{ exportStatus }}</p>
+      <p v-else-if="!hasMaps" class="-mt-4 text-xs text-ink-gray-5">
+        Add a process, sub process and map to enable bulk export.
+      </p>
 
       <p v-if="summary.loading" class="py-10 text-center text-sm text-ink-gray-5">
         Loading summary…
